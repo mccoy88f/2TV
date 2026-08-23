@@ -23,6 +23,7 @@ import com.twotv.app.data.model.MediaType
 import com.twotv.app.data.model.PairedTv
 import com.twotv.app.ui.MainViewModel
 import com.twotv.app.ui.SendCategoryMode
+import com.twotv.app.ui.components.ContentTypeSelectionDialog
 import com.twotv.app.ui.components.QRScannerDialog
 import com.twotv.app.ui.components.TvSelectionShareDialog
 import com.twotv.app.ui.screens.HistoryScreen
@@ -46,16 +47,25 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         var showTvShareDialog by mutableStateOf(false)
+        var showContentTypeDialog by mutableStateOf(false)
+
         if (!isShareIntentProcessed) {
-            handleIncomingIntent(intent) {
-                showTvShareDialog = true
-                isShareIntentProcessed = true
-            }
+            handleIncomingIntent(intent,
+                onDirectShare = {
+                    showTvShareDialog = true
+                    isShareIntentProcessed = true
+                },
+                on2TvSchemeShare = {
+                    showContentTypeDialog = true
+                    isShareIntentProcessed = true
+                }
+            )
         }
 
         setContent {
             val isDarkThemeOverride by viewModel.isDarkThemeOverride.collectAsState()
             val pairedTvs by viewModel.pairedTvs.collectAsState()
+            val currentUrl by viewModel.inputUrl.collectAsState()
             val useDark = isDarkThemeOverride ?: isSystemInDarkTheme()
 
             TwoTVTheme(darkTheme = useDark) {
@@ -133,12 +143,27 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
+                    if (showContentTypeDialog) {
+                        ContentTypeSelectionDialog(
+                            urlOrPath = currentUrl,
+                            onSelectMode = { mode ->
+                                viewModel.setSendCategoryMode(mode)
+                                showContentTypeDialog = false
+                                showTvShareDialog = true
+                            },
+                            onDismiss = {
+                                showContentTypeDialog = false
+                                intent?.action = null
+                            }
+                        )
+                    }
+
                     if (showTvShareDialog && pairedTvs.isNotEmpty()) {
                         TvSelectionShareDialog(
                             pairedTvs = pairedTvs,
                             onSelectTv = { selectedTv ->
                                 showTvShareDialog = false
-                                intent?.action = null // Clear action so dialog doesn't re-appear
+                                intent?.action = null
                                 viewModel.sendCurrentContent(targetTv = selectedTv)
                             },
                             onCopyLink = {
@@ -167,34 +192,41 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         isShareIntentProcessed = false
-        handleIncomingIntent(intent) {
-            // Intent handled cleanly
-        }
+        handleIncomingIntent(intent, onDirectShare = {}, on2TvSchemeShare = {})
     }
 
-    private fun handleIncomingIntent(intent: Intent?, onReceived: () -> Unit) {
+    private fun handleIncomingIntent(
+        intent: Intent?,
+        onDirectShare: () -> Unit,
+        on2TvSchemeShare: () -> Unit
+    ) {
         if (intent == null || intent.action == null) return
 
         when (intent.action) {
-            // Stremio / External Player / Web Video Caster share target
             Intent.ACTION_VIEW -> {
                 val dataUri = intent.data
                 val mimeType = intent.type
+
                 if (dataUri != null) {
-                    val urlString = dataUri.toString()
-                    if (urlString.startsWith("http://") || urlString.startsWith("https://")) {
-                        viewModel.setUrl(urlString)
-                        viewModel.setSendCategoryMode(SendCategoryMode.STREAM)
-                        viewModel.setTitle(intent.getStringExtra(Intent.EXTRA_TITLE) ?: "")
+                    if (dataUri.scheme == "2tv") {
+                        val cleanUrl = parse2TvSchemeUrl(dataUri)
+                        viewModel.setUrl(cleanUrl)
+                        on2TvSchemeShare()
                     } else {
-                        viewModel.setFileUri(dataUri, mimeType)
-                        viewModel.setSendCategoryMode(SendCategoryMode.FILE)
+                        val urlString = dataUri.toString()
+                        if (urlString.startsWith("http://") || urlString.startsWith("https://")) {
+                            viewModel.setUrl(urlString)
+                            viewModel.setSendCategoryMode(SendCategoryMode.STREAM)
+                            viewModel.setTitle(intent.getStringExtra(Intent.EXTRA_TITLE) ?: "")
+                        } else {
+                            viewModel.setFileUri(dataUri, mimeType)
+                            viewModel.setSendCategoryMode(SendCategoryMode.FILE)
+                        }
+                        onDirectShare()
                     }
-                    onReceived()
                 }
             }
 
-            // Android System Share
             Intent.ACTION_SEND -> {
                 val type = intent.type
                 if (type == "text/plain") {
@@ -202,18 +234,34 @@ class MainActivity : ComponentActivity() {
                     if (sharedText.isNotBlank()) {
                         val extractedUrl = extractUrl(sharedText)
                         viewModel.setUrl(extractedUrl)
-                        onReceived()
+                        onDirectShare()
                     }
                 } else {
                     val fileUri: Uri? = intent.getParcelableExtra(Intent.EXTRA_STREAM)
                     if (fileUri != null) {
                         viewModel.setFileUri(fileUri, type)
                         viewModel.setSendCategoryMode(SendCategoryMode.FILE)
-                        onReceived()
+                        onDirectShare()
                     }
                 }
             }
         }
+    }
+
+    private fun parse2TvSchemeUrl(uri: Uri): String {
+        val raw = uri.toString()
+        // e.g. 2tv://https://example.com/stream.m3u8 -> https://example.com/stream.m3u8
+        var clean = raw.removePrefix("2tv://")
+        if (!clean.startsWith("http://") && !clean.startsWith("https://")) {
+            val queryUrl = uri.getQueryParameter("url")
+            if (!queryUrl.isNullOrEmpty()) {
+
+                clean = queryUrl
+            } else if (!clean.startsWith("http")) {
+                clean = "https://$clean"
+            }
+        }
+        return clean
     }
 
     private fun extractUrl(text: String): String {
