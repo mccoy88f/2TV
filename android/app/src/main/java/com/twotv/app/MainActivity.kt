@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -23,6 +24,7 @@ import com.twotv.app.data.model.MediaType
 import com.twotv.app.data.model.PairedTv
 import com.twotv.app.ui.MainViewModel
 import com.twotv.app.ui.SendCategoryMode
+import com.twotv.app.ui.components.AboutDialog
 import com.twotv.app.ui.components.ContentTypeSelectionDialog
 import com.twotv.app.ui.components.QRScannerDialog
 import com.twotv.app.ui.components.TvSelectionShareDialog
@@ -71,12 +73,16 @@ class MainActivity : ComponentActivity() {
             TwoTVTheme(darkTheme = useDark) {
                 var currentScreen by remember { mutableStateOf(Screen.HOME) }
                 var showQrScannerDialog by remember { mutableStateOf(false) }
+                var showAboutDialog by remember { mutableStateOf(false) }
 
                 Scaffold(
                     topBar = {
                         TopAppBar(
                             title = {
-                                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                Row(
+                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                    modifier = Modifier.clickable { showAboutDialog = true }
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.Tv,
                                         contentDescription = null,
@@ -129,6 +135,12 @@ class MainActivity : ComponentActivity() {
                                 onOpenQrScanner = { showQrScannerDialog = true }
                             )
                         }
+                    }
+
+                    if (showAboutDialog) {
+                        AboutDialog(
+                            onDismiss = { showAboutDialog = false }
+                        )
                     }
 
                     if (showQrScannerDialog) {

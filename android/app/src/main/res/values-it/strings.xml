@@ -54,5 +54,11 @@
     <string name="select_target_tv_desc">Scegli a quale schermo inviare il contenuto condiviso:</string>
     <string name="copy_link">Copia Link</string>
     <string name="link_copied">Link copiato negli appunti!</string>
+    <string name="about_2tv">Informazioni su 2TV</string>
+    <string name="author">Autore: mccoy88f</string>
+    <string name="version">Versione 1.0.0</string>
+    <string name="github_repository">Repository GitHub</string>
+    <string name="app_description">Condividi facilmente stream video, file multimediali e pagine web dallo smartphone alla TV.</string>
 </resources>
+
 

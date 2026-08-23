@@ -54,5 +54,11 @@
     <string name="select_target_tv_desc">Choose which screen to send the shared content to:</string>
     <string name="copy_link">Copy Link</string>
     <string name="link_copied">Link copied to clipboard!</string>
+    <string name="about_2tv">About 2TV</string>
+    <string name="author">Author: mccoy88f</string>
+    <string name="version">Version 1.0.0</string>
+    <string name="github_repository">GitHub Repository</string>
+    <string name="app_description">Seamlessly share streams, files, photos, and web pages from your smartphone to Android TV.</string>
 </resources>
+
 
