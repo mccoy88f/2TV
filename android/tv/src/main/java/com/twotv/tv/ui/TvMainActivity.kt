@@ -1,10 +1,13 @@
 package com.twotv.tv.ui
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
+import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
 import coil.load
@@ -15,9 +18,13 @@ import com.twotv.tv.server.DevicePairInfo
 import com.twotv.tv.server.TvEmbeddedServer
 import com.twotv.tv.server.TvPlayPayload
 import com.twotv.tv.util.QrCodeGenerator
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.Inet4Address
 import java.net.NetworkInterface
+import java.net.URL
 
 class TvMainActivity : FragmentActivity() {
 
@@ -29,6 +36,7 @@ class TvMainActivity : FragmentActivity() {
     private val pairedDevices = mutableSetOf<String>()
     private val PAIRING_TOKEN = "2tv-secret-tv-token"
 
+    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityTvMainBinding.inflate(layoutInflater)
@@ -37,6 +45,11 @@ class TvMainActivity : FragmentActivity() {
         // Initialize ExoPlayer
         exoPlayer = ExoPlayer.Builder(this).build()
         binding.playerView.player = exoPlayer
+
+        // Initialize WebView
+        binding.webView.settings.javaScriptEnabled = true
+        binding.webView.settings.domStorageEnabled = true
+        binding.webView.webViewClient = WebViewClient()
 
         // Get IP and generate QR Code
         val ip = getLocalIpAddress()
@@ -57,12 +70,10 @@ class TvMainActivity : FragmentActivity() {
             binding.qrImageView.setImageBitmap(qrBitmap)
         }
 
-        // Button to trigger new QR Code pairing
         binding.btnShowQrCode.setOnClickListener {
             showQrCodeScreen()
         }
 
-        // Start Ktor HTTP Server
         embeddedServer = TvEmbeddedServer(
             context = applicationContext,
             port = 8080,
@@ -85,10 +96,8 @@ class TvMainActivity : FragmentActivity() {
         val entry = "• ${device.deviceName} (${device.deviceIp})"
         pairedDevices.add(entry)
 
-        // Hide QR Code and show active paired devices list
         binding.qrCard.visibility = View.GONE
         binding.pairedDevicesCard.visibility = View.VISIBLE
-
         binding.pairedDevicesListText.text = pairedDevices.joinToString("\n")
     }
 
@@ -98,7 +107,11 @@ class TvMainActivity : FragmentActivity() {
     }
 
     private fun handleReceivedMedia(payload: TvPlayPayload) {
-        val category = TvArchiveItem.categorize(payload.url, payload.mediaType)
+        val category = if (payload.mediaType.equals("WEB", ignoreCase = true)) {
+            MediaCategory.WEB
+        } else {
+            TvArchiveItem.categorize(payload.url, payload.mediaType)
+        }
         val isLocal = File(payload.url).exists()
 
         val archiveItem = TvArchiveItem(
@@ -124,6 +137,7 @@ class TvMainActivity : FragmentActivity() {
         binding.idleContainer.visibility = View.GONE
         binding.playerView.visibility = View.GONE
         binding.imageView.visibility = View.GONE
+        binding.webView.visibility = View.GONE
 
         when (item.category) {
             MediaCategory.FOTO -> {
@@ -134,6 +148,7 @@ class TvMainActivity : FragmentActivity() {
                     binding.imageView.load(item.pathOrUrl)
                 }
             }
+
             MediaCategory.VIDEO, MediaCategory.AUDIO -> {
                 binding.playerView.visibility = View.VISIBLE
                 binding.playerView.requestFocus()
@@ -142,8 +157,19 @@ class TvMainActivity : FragmentActivity() {
                 exoPlayer?.prepare()
                 exoPlayer?.play()
             }
-            MediaCategory.WEB, MediaCategory.ALTRO -> {
-                Toast.makeText(this, "Link Web Ricevuto: ${item.pathOrUrl}", Toast.LENGTH_LONG).show()
+
+            MediaCategory.WEB -> {
+                binding.webView.visibility = View.VISIBLE
+                binding.webView.requestFocus()
+                binding.webView.loadUrl(item.pathOrUrl)
+            }
+
+            MediaCategory.ALTRO -> {
+                if (item.pathOrUrl.startsWith("http://") || item.pathOrUrl.startsWith("https://")) {
+                    downloadFileToTv(item.pathOrUrl, item.title)
+                } else {
+                    Toast.makeText(this, "File Locale TV: ${item.pathOrUrl}", Toast.LENGTH_LONG).show()
+                }
                 binding.idleContainer.visibility = View.VISIBLE
             }
         }
@@ -151,6 +177,31 @@ class TvMainActivity : FragmentActivity() {
         binding.root.postDelayed({
             binding.nowPlayingBanner.visibility = View.GONE
         }, 5000)
+    }
+
+    private fun downloadFileToTv(urlStr: String, title: String) {
+        Toast.makeText(this, "Download avviato per: $title", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val downloadsDir = File(filesDir, "downloads").apply { mkdirs() }
+                val fileName = title.ifBlank { urlStr.substringAfterLast("/") }.substringBefore("?")
+                val destFile = File(downloadsDir, fileName.ifBlank { "downloaded_file_${System.currentTimeMillis()}" })
+
+                URL(urlStr).openStream().use { input ->
+                    destFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@TvMainActivity, "Download completato: ${destFile.name}", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@TvMainActivity, "Errore download: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -165,6 +216,7 @@ class TvMainActivity : FragmentActivity() {
         exoPlayer?.stop()
         binding.playerView.visibility = View.GONE
         binding.imageView.visibility = View.GONE
+        binding.webView.visibility = View.GONE
         binding.idleContainer.visibility = View.VISIBLE
     }
 

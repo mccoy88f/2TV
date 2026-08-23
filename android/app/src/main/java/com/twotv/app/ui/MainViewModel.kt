@@ -12,6 +12,12 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.util.UUID
 
+enum class SendCategoryMode {
+    FILE,
+    STREAM,
+    LINK
+}
+
 sealed interface SendUiState {
     object Idle : SendUiState
     object Sending : SendUiState
@@ -35,6 +41,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val sendHistory: StateFlow<List<SendHistory>> = historyDao.getHistory()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    var sendCategoryMode = MutableStateFlow(SendCategoryMode.STREAM)
     var inputUrl = MutableStateFlow("")
     var inputTitle = MutableStateFlow("")
     var selectedMediaType = MutableStateFlow(MediaType.VIDEO)
@@ -43,6 +50,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val sendUiState = MutableStateFlow<SendUiState>(SendUiState.Idle)
     val isDarkThemeOverride = MutableStateFlow<Boolean?>(null)
+
+    fun setSendCategoryMode(mode: SendCategoryMode) {
+        sendCategoryMode.value = mode
+        when (mode) {
+            SendCategoryMode.STREAM -> selectedMediaType.value = MediaType.VIDEO
+            SendCategoryMode.LINK -> selectedMediaType.value = MediaType.STREAM
+            SendCategoryMode.FILE -> {}
+        }
+    }
 
     fun setUrl(url: String) {
         inputUrl.value = url
@@ -56,6 +72,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         selectedFileUri.value = uri
         inputUrl.value = uri.toString()
         selectedMediaType.value = detectMediaTypeFromMime(mimeType)
+        sendCategoryMode.value = SendCategoryMode.FILE
         inputTitle.value = "File Locale (${selectedMediaType.value.name})"
     }
 
@@ -87,8 +104,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val title = if (inputTitle.value.isNotBlank()) inputTitle.value else "Media 2TV"
             val fileUri = selectedFileUri.value
 
-            if (fileUri != null) {
-                // Upload Local File
+            if (sendCategoryMode.value == SendCategoryMode.FILE && fileUri != null) {
+                // FILE Mode: Local File Upload Transfer to TV
                 val result = senderClient.uploadFileToTv(
                     context = getApplication(),
                     tv = tv,
@@ -115,16 +132,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     sendUiState.value = SendUiState.Error(errorMsg)
                 }
             } else {
-                // Remote URL Payload
+                // STREAM or LINK Mode
                 val url = inputUrl.value.trim()
                 if (url.isEmpty()) {
                     sendUiState.value = SendUiState.Error("Inserisci un URL o seleziona un file valido")
                     return@launch
                 }
 
+                val mediaTypeString = when (sendCategoryMode.value) {
+                    SendCategoryMode.STREAM -> selectedMediaType.value.name
+                    SendCategoryMode.LINK -> "WEB"
+                    SendCategoryMode.FILE -> selectedMediaType.value.name
+                }
+
                 val payload = MediaPayload(
                     command = "PLAY",
-                    mediaType = selectedMediaType.value.name,
+                    mediaType = mediaTypeString,
                     url = url,
                     title = title,
                     saveToTv = saveToTv.value
@@ -214,7 +237,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             senderClient.sendPairingRequest(tv)
         }
     }
-
 
     fun selectTv(tvId: String) {
         viewModelScope.launch {

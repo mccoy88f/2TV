@@ -1,5 +1,8 @@
 package com.twotv.app.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,11 +16,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.twotv.app.data.model.MediaType
 import com.twotv.app.data.model.PairedTv
 import com.twotv.app.ui.MainViewModel
+import com.twotv.app.ui.SendCategoryMode
 import com.twotv.app.ui.SendUiState
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
@@ -28,13 +33,26 @@ fun HomeScreen(
     onOpenTvsScreen: () -> Unit
 ) {
     val selectedTv by viewModel.selectedTv.collectAsState()
+    val sendMode by viewModel.sendCategoryMode.collectAsState()
     val url by viewModel.inputUrl.collectAsState()
     val title by viewModel.inputTitle.collectAsState()
     val mediaType by viewModel.selectedMediaType.collectAsState()
     val saveToTv by viewModel.saveToTv.collectAsState()
     val sendState by viewModel.sendUiState.collectAsState()
+    val selectedFileUri by viewModel.selectedFileUri.collectAsState()
 
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            val contentResolver = context.contentResolver
+            val type = contentResolver.getType(uri)
+            viewModel.setFileUri(uri, type)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -50,7 +68,7 @@ fun HomeScreen(
             onOpenTvsScreen = onOpenTvsScreen
         )
 
-        // Send Status Banner if any
+        // Status Banner if any
         when (val state = sendState) {
             is SendUiState.Success -> {
                 Card(
@@ -93,7 +111,61 @@ fun HomeScreen(
             else -> {}
         }
 
-        // Input Form Card
+        // 3-Way Mode Segmented Tabs (FILE, STREAM, LINK)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Modalità di Invio 2TV",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = sendMode == SendCategoryMode.STREAM,
+                        onClick = { viewModel.setSendCategoryMode(SendCategoryMode.STREAM) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.LiveTv, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Stream")
+                        }
+                    }
+
+                    SegmentedButton(
+                        selected = sendMode == SendCategoryMode.FILE,
+                        onClick = { viewModel.setSendCategoryMode(SendCategoryMode.FILE) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("File")
+                        }
+                    }
+
+                    SegmentedButton(
+                        selected = sendMode == SendCategoryMode.LINK,
+                        onClick = { viewModel.setSendCategoryMode(SendCategoryMode.LINK) },
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Link Web")
+                        }
+                    }
+                }
+            }
+        }
+
+        // Main Input Form Card
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(24.dp),
@@ -103,80 +175,113 @@ fun HomeScreen(
                 modifier = Modifier.padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Condividi Contenuto",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
+                when (sendMode) {
+                    SendCategoryMode.FILE -> {
+                        Text(
+                            text = "Seleziona File dal Dispositivo",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = "Il file verrà trasferito via Wi-Fi alla TV ed avviato al termine del caricamento.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
 
-                // URL Input
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = { viewModel.setUrl(it) },
-                    label = { Text("URL del file / stream") },
-                    placeholder = { Text("https://example.com/video.mp4") },
-                    modifier = Modifier.fillMaxWidth(),
-                    trailingIcon = {
-                        if (url.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.setUrl("") }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Pulisci")
+                        Button(
+                            onClick = { filePickerLauncher.launch("*/*") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                        ) {
+                            Icon(Icons.Default.UploadFile, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Scegli Video, Foto o Audio", color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        }
+
+                        if (selectedFileUri != null) {
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.InsertDriveFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                                        Text("File pronto per l'upload", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
                             }
                         }
-                    },
-                    leadingIcon = {
-                        Icon(Icons.Default.Link, contentDescription = null)
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp)
-                )
+                    }
 
-                // Title Input
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { viewModel.setTitle(it) },
-                    label = { Text("Titolo (Opzionale)") },
-                    placeholder = { Text("es. Trailer Film") },
-                    modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = {
-                        Icon(Icons.Default.Title, contentDescription = null)
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp)
-                )
+                    SendCategoryMode.STREAM -> {
+                        Text(
+                            text = "Invia Stream Video / Audio (es. Stremio, HLS)",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
 
-                // Media Type Selector Chips
-                Text(
-                    text = "Tipo di Contenuto",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                        OutlinedTextField(
+                            value = url,
+                            onValueChange = { viewModel.setUrl(it) },
+                            label = { Text("URL dello Stream (.m3u8, .mp4, Stremio)") },
+                            placeholder = { Text("https://example.com/stream.m3u8") },
+                            modifier = Modifier.fillMaxWidth(),
+                            trailingIcon = {
+                                if (url.isNotEmpty()) {
+                                    IconButton(onClick = { viewModel.setUrl("") }) {
+                                        Icon(Icons.Default.Clear, contentDescription = null)
+                                    }
+                                }
+                            },
+                            leadingIcon = { Icon(Icons.Default.LiveTv, contentDescription = null) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                    }
 
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    MediaType.values().forEach { type ->
-                        val selected = mediaType == type
-                        FilterChip(
-                            selected = selected,
-                            onClick = { viewModel.setMediaType(type) },
-                            label = { Text(type.name) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = when (type) {
-                                        MediaType.VIDEO -> Icons.Default.Movie
-                                        MediaType.IMAGE -> Icons.Default.Image
-                                        MediaType.AUDIO -> Icons.Default.MusicNote
-                                        MediaType.STREAM -> Icons.Default.LiveTv
-                                    },
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
+                    SendCategoryMode.LINK -> {
+                        Text(
+                            text = "Invia Link Web o Download",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = "Se il link è una pagina web verrà aperta nel browser TV; se è un file verrà scaricato sulla TV.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        OutlinedTextField(
+                            value = url,
+                            onValueChange = { viewModel.setUrl(it) },
+                            label = { Text("URL Pagina Web o File Download") },
+                            placeholder = { Text("https://wikipedia.org") },
+                            modifier = Modifier.fillMaxWidth(),
+                            leadingIcon = { Icon(Icons.Default.Language, contentDescription = null) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp)
                         )
                     }
                 }
 
-                // Switch Salva su TV
+                // Optional Title Input
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { viewModel.setTitle(it) },
+                    label = { Text("Titolo (Opzionale)") },
+                    placeholder = { Text("es. Trailer Film / Nome Contenuto") },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(Icons.Default.Title, contentDescription = null) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp)
+                )
+
+                // Salva su TV Switch
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp)
@@ -192,8 +297,8 @@ fun HomeScreen(
                             Icon(Icons.Default.Bookmark, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
-                                Text("Salva su TV", style = MaterialTheme.typography.titleSmall)
-                                Text("Salva nella memoria / cronologia TV", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Salva nell'Archivio TV", style = MaterialTheme.typography.titleSmall)
+                                Text("Salva il contenuto nella cronologia TV", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         Switch(
@@ -210,7 +315,7 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    enabled = sendState !is SendUiState.Sending && selectedTv != null && url.isNotBlank()
+                    enabled = sendState !is SendUiState.Sending && selectedTv != null && (url.isNotBlank() || selectedFileUri != null)
                 ) {
                     if (sendState is SendUiState.Sending) {
                         CircularProgressIndicator(
@@ -224,7 +329,11 @@ fun HomeScreen(
                         Icon(Icons.Default.Tv, contentDescription = null)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Invia 2TV",
+                            text = when (sendMode) {
+                                SendCategoryMode.FILE -> "Carica File 2TV"
+                                SendCategoryMode.STREAM -> "Avvia Stream 2TV"
+                                SendCategoryMode.LINK -> "Invia Link 2TV"
+                            },
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
                     }
@@ -247,11 +356,12 @@ fun HomeScreen(
                 )
 
                 SamplePresetItem(
-                    title = "Video Demopack (Big Buck Bunny)",
-                    subtitle = "Video MP4",
+                    title = "Video Stream MP4 (Big Buck Bunny)",
+                    subtitle = "Stream Video Direct",
                     type = MediaType.VIDEO,
                     url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
                     onSelect = { url, type, title ->
+                        viewModel.setSendCategoryMode(SendCategoryMode.STREAM)
                         viewModel.setUrl(url)
                         viewModel.setMediaType(type)
                         viewModel.setTitle(title)
@@ -259,11 +369,12 @@ fun HomeScreen(
                 )
 
                 SamplePresetItem(
-                    title = "Live Stream HLS (TVI Test Stream)",
-                    subtitle = "Stream Live HLS .m3u8",
+                    title = "Live Stream HLS (.m3u8)",
+                    subtitle = "Stream Live HLS Mux",
                     type = MediaType.STREAM,
                     url = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
                     onSelect = { url, type, title ->
+                        viewModel.setSendCategoryMode(SendCategoryMode.STREAM)
                         viewModel.setUrl(url)
                         viewModel.setMediaType(type)
                         viewModel.setTitle(title)
@@ -271,25 +382,13 @@ fun HomeScreen(
                 )
 
                 SamplePresetItem(
-                    title = "Foto 4K Wallpaper (Unsplash)",
-                    subtitle = "Immagine JPG High-Res",
+                    title = "Pagina Web Wikipedia",
+                    subtitle = "Link Web da aprire nel browser TV",
                     type = MediaType.IMAGE,
-                    url = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80",
-                    onSelect = { url, type, title ->
+                    url = "https://it.wikipedia.org",
+                    onSelect = { url, _, title ->
+                        viewModel.setSendCategoryMode(SendCategoryMode.LINK)
                         viewModel.setUrl(url)
-                        viewModel.setMediaType(type)
-                        viewModel.setTitle(title)
-                    }
-                )
-
-                SamplePresetItem(
-                    title = "Audio Podcast Sample",
-                    subtitle = "Audio MP3",
-                    type = MediaType.AUDIO,
-                    url = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-                    onSelect = { url, type, title ->
-                        viewModel.setUrl(url)
-                        viewModel.setMediaType(type)
                         viewModel.setTitle(title)
                     }
                 )

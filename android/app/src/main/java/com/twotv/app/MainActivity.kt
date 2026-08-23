@@ -15,9 +15,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.twotv.app.data.model.MediaType
 import com.twotv.app.data.model.PairedTv
 import com.twotv.app.ui.MainViewModel
+import com.twotv.app.ui.SendCategoryMode
 import com.twotv.app.ui.components.QRScannerDialog
+
 import com.twotv.app.ui.components.TvSelectionShareDialog
 import com.twotv.app.ui.screens.HistoryScreen
 import com.twotv.app.ui.screens.HomeScreen
@@ -38,18 +41,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        var isFromShareIntent by mutableStateOf(false)
-        handleShareIntent(intent) {
-            isFromShareIntent = true
+        var isFromExternalShare by mutableStateOf(false)
+        handleIncomingIntent(intent) {
+            isFromExternalShare = true
         }
-
 
         setContent {
             val isDarkThemeOverride by viewModel.isDarkThemeOverride.collectAsState()
             val pairedTvs by viewModel.pairedTvs.collectAsState()
             val useDark = isDarkThemeOverride ?: isSystemInDarkTheme()
 
-            var showTvShareDialog by remember { mutableStateOf(isFromShareIntent) }
+            var showTvShareDialog by remember { mutableStateOf(isFromExternalShare) }
 
             TwoTVTheme(darkTheme = useDark) {
                 var currentScreen by remember { mutableStateOf(Screen.HOME) }
@@ -57,7 +59,6 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(
                     topBar = {
-                        OptIn(ExperimentalMaterial3Api::class)
                         TopAppBar(
                             title = {
                                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
@@ -144,36 +145,56 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        handleShareIntent(intent) {}
+        handleIncomingIntent(intent) {}
     }
 
-    private fun handleShareIntent(intent: Intent?, onShared: () -> Unit) {
-        if (intent?.action == Intent.ACTION_SEND) {
-            val type = intent.type
-            if (type == "text/plain") {
-                val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
-                if (sharedText.isNotBlank()) {
-                    val extractedUrl = extractUrl(sharedText)
-                    viewModel.setUrl(extractedUrl)
-                    onShared()
+    private fun handleIncomingIntent(intent: Intent?, onReceived: () -> Unit) {
+        if (intent == null) return
+
+        when (intent.action) {
+            // Stremio / External Player / Web Video Caster share target
+            Intent.ACTION_VIEW -> {
+                val dataUri = intent.data
+                val mimeType = intent.type
+                if (dataUri != null) {
+                    val urlString = dataUri.toString()
+                    if (urlString.startsWith("http://") || urlString.startsWith("https://")) {
+                        viewModel.setUrl(urlString)
+                        viewModel.setSendCategoryMode(SendCategoryMode.STREAM)
+                        viewModel.setTitle(intent.getStringExtra(Intent.EXTRA_TITLE) ?: "Stream Stremio / Player")
+                    } else {
+                        viewModel.setFileUri(dataUri, mimeType)
+                        viewModel.setSendCategoryMode(SendCategoryMode.FILE)
+                    }
+                    onReceived()
                 }
-            } else {
-                // Local Media File Uri
-                val fileUri: Uri? = intent.getParcelableExtra(Intent.EXTRA_STREAM)
-                if (fileUri != null) {
-                    viewModel.setFileUri(fileUri, type)
-                    onShared()
+            }
+
+            // Android System Share
+            Intent.ACTION_SEND -> {
+                val type = intent.type
+                if (type == "text/plain") {
+                    val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
+                    if (sharedText.isNotBlank()) {
+                        val extractedUrl = extractUrl(sharedText)
+                        viewModel.setUrl(extractedUrl)
+                        onReceived()
+                    }
+                } else {
+                    val fileUri: Uri? = intent.getParcelableExtra(Intent.EXTRA_STREAM)
+                    if (fileUri != null) {
+                        viewModel.setFileUri(fileUri, type)
+                        viewModel.setSendCategoryMode(SendCategoryMode.FILE)
+                        onReceived()
+                    }
                 }
             }
         }
     }
-
 
     private fun extractUrl(text: String): String {
         val urlRegex = Regex("(https?://[\\w-]+(\\.[\\w-]+)+[/#?]?.*)")
         val match = urlRegex.find(text)
         return match?.value ?: text
     }
-
-    private fun String?.isNull_orEmpty(): Boolean = this == null || this.trim().isEmpty()
 }
