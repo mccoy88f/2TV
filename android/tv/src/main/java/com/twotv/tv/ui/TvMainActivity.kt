@@ -1,7 +1,7 @@
 package com.twotv.tv.ui
 
-import android.net.wifi.WifiManager
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.View
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
@@ -14,7 +14,6 @@ import com.twotv.tv.model.TvArchiveItem
 import com.twotv.tv.server.TvEmbeddedServer
 import com.twotv.tv.server.TvPlayPayload
 import com.twotv.tv.util.QrCodeGenerator
-import kotlinx.serialization.json.Json
 import java.io.File
 import java.net.Inet4Address
 import java.net.NetworkInterface
@@ -33,11 +32,11 @@ class TvMainActivity : FragmentActivity() {
         binding = ActivityTvMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Initialize ExoPlayer
+        // Initialize ExoPlayer for Leanback TV playback
         exoPlayer = ExoPlayer.Builder(this).build()
         binding.playerView.player = exoPlayer
 
-        // Start Ktor HTTP Server
+        // Get local Wi-Fi IP and start embedded server
         val ip = getLocalIpAddress()
         binding.ipTextView.text = "IP TV: http://$ip:8080"
 
@@ -107,6 +106,7 @@ class TvMainActivity : FragmentActivity() {
             }
             MediaCategory.VIDEO, MediaCategory.AUDIO -> {
                 binding.playerView.visibility = View.VISIBLE
+                binding.playerView.requestFocus()
                 val mediaItem = MediaItem.fromUri(item.pathOrUrl)
                 exoPlayer?.setMediaItem(mediaItem)
                 exoPlayer?.prepare()
@@ -121,6 +121,22 @@ class TvMainActivity : FragmentActivity() {
         binding.root.postDelayed({
             binding.nowPlayingBanner.visibility = View.GONE
         }, 5000)
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        // TV Remote Back key stops current playback and returns to QR code home screen
+        if (keyCode == KeyEvent.KEYCODE_BACK && binding.idleContainer.visibility != View.VISIBLE) {
+            stopPlaybackAndShowHome()
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    private fun stopPlaybackAndShowHome() {
+        exoPlayer?.stop()
+        binding.playerView.visibility = View.GONE
+        binding.imageView.visibility = View.GONE
+        binding.idleContainer.visibility = View.VISIBLE
     }
 
     private fun getLocalIpAddress(): String {

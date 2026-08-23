@@ -1,33 +1,36 @@
-<<<<<<< HEAD
-# 2TV
-Send to any TV any content, fast, easy and secure.
-=======
-# 2TV (To TV) - Sistema di Condivisione Contenuti e File su Smart TV
+# 2TV (To TV) - App Cellulare & App Nativa Android TV
 
-**2TV** è un sistema multi-piattaforma per condividere e riprodurre in tempo reale contenuti multimediali (video, dirette streaming, immagini, audio e pagine web) o **file locali fisici** da uno smartphone/tablet Android direttamente su uno schermo Smart TV (Android TV, LG webOS, Samsung Tizen) presente nella stessa rete locale (LAN/WiFi).
+**2TV** è un sistema composto da un'**App Mobile Controller per Cellulare** e un'**App Nativa per Android TV** per condividere e riprodurre in tempo reale qualsiasi contenuto multimediale (video, dirette streaming, foto, audio e pagine web) o **file fisici locali** dallo smartphone verso uno schermo TV in rete locale (WiFi).
 
 ---
 
-## 🚀 Funzionalità
+## 📱📦 File APK Pronti all'Uso
 
-### 📺 App Nativa Android TV (`:tv`) & Simulatore TV
-- **Interfaccia TV Leanback**: Ottimizzata per schermi grandi e navigabile da telecomando TV.
-- **Server HTTP Embedded (Ktor Server CIO)**: Avvia automaticamente un server locale sulla porta `8080` della TV.
-- **QR Code di Abbinamento a Schermo**: Generato dinamicamente con ZXing (IP, porta 8080 e token di sicurezza).
-- **Player Integrato ExoPlayer (Media3)**: Riproduzione ad alte prestazioni di video MP4, MKV, stream live HLS `.m3u8`, audio ed immagini HD.
-- **Catalogazione Automatica dell'Archivio TV**:
+Troverai i file `.apk` pronti per l'installazione diretta nella cartella [`apks/`](file:///Users/antonello/Sviluppo/2TV/apks):
+1. 📲 **App Cellulare**: [`apks/2TV-Mobile.apk`](file:///Users/antonello/Sviluppo/2TV/apks/2TV-Mobile.apk)
+2. 📺 **App Android TV**: [`apks/2TV-AndroidTV.apk`](file:///Users/antonello/Sviluppo/2TV/apks/2TV-AndroidTV.apk)
+
+---
+
+## 🚀 Caratteristiche
+
+### 📺 App Nativa Android TV (`:tv`)
+- **Interfaccia TV Leanback**: Ottimizzata per schermi grandi e controllabile da telecomando TV (tasto BACK per interrompere la riproduzione e tornare alla Home).
+- **Server HTTP integrato (Ktor CIO)**: Avvia automaticamente un server locale sulla porta `8080` della TV.
+- **QR Code di Abbinamento a Schermo**: Mostrato all'avvio con IP, porta 8080 e token di sicurezza.
+- **Player Integrato ExoPlayer (Media3)**: Riproduzione fluida di video MP4, MKV, stream live HLS `.m3u8`, audio ed immagini HD.
+- **Catalogazione Automatica**:
   - 📸 **Foto**: Immagini JPG, PNG, WebP, GIF.
   - 🎬 **Video**: Video e dirette streaming HLS.
   - 🎵 **Audio**: File e stream musicali.
   - 🌐 **Web**: Pagine e link web.
   - 📁 **Altro**: File generici.
-- **Gestione Manuale dell'Archivio**: Possibilità di riprodurre, riorganizzare o eliminare manualmente gli elementi salvati sulla memoria della TV.
 
-### 📱 App Android Mobile Controller (`:app`)
-- **Material Design 3**: Temi Chiaro (White) e Scuro (Dark) con pulsante di switch rapido.
-- **Abbinamento Locale QR Code**: Scansione con **CameraX** + **ML Kit Barcode Scanning**.
-- **Trasferimento File Fisici (`POST /api/upload`)**: Invio di file locali (video o foto dalla Galleria/memoria del telefono) tramite upload HTTP alla TV con riproduzione automatica a fine caricamento.
-- **Menù Condividi con Selettore TV (`TvSelectionShareDialog`)**: Condividendo un link o file da qualsiasi app Android (YouTube, Chrome, Galleria, Gestore File), si apre un dialog per scegliere la TV di destinazione con 1 tap.
+### 📱 App Mobile Controller per Cellulare (`:app`)
+- **Material Design 3**: Temi Chiaro (White) e Scuro (Dark) con switch rapido.
+- **Abbinamento Locale QR Code**: Scansione integrata con **CameraX** + **ML Kit Barcode Scanning**.
+- **Trasferimento File Locali (`POST /api/upload`)**: Caricamento di file video/foto dalla memoria del telefono verso la TV con riproduzione automatica a fine upload.
+- **Selettore TV da Condivisione (`TvSelectionShareDialog`)**: Condividendo un link o file da YouTube, Chrome, Galleria o Gestore File, si apre un dialog per scegliere la TV di destinazione con 1 tap.
 
 ---
 
@@ -35,15 +38,10 @@ Send to any TV any content, fast, easy and secure.
 
 ```
 2TV/
-├── android/
-│   ├── app/                   # App Mobile Android (Kotlin + Jetpack Compose)
-│   └── tv/                    # App Nativa Android TV (Leanback + ExoPlayer + Ktor Server)
-│
-├── tv-receiver-simulator/     # Simulatore Web/Node per Smart TV
-│   ├── public/index.html      # UI Lettore TV + Filtri Categorie (Foto, Video, Audio, Web, Altro)
-│   └── server.js              # Server HTTP / REST API / SSE
-│
-└── README.md
+├── apks/                      # APK pronti (2TV-Mobile.apk, 2TV-AndroidTV.apk)
+└── android/
+    ├── app/                   # App Mobile Android (Kotlin + Jetpack Compose)
+    └── tv/                    # App Nativa Android TV (Leanback + ExoPlayer + Ktor Server)
 ```
 
 ---
@@ -62,5 +60,4 @@ Send to any TV any content, fast, easy and secure.
 ```
 
 ### Inviare File Locale Fisico: `POST /api/upload`
-Invia una richiesta `multipart/form-data` con i campi `mediaType`, `title`, `saveToTv` e `file`.
->>>>>>> c732c15 (Initial release of 2TV: Android Mobile Controller, Android TV Native Receiver, and Smart TV Simulator)
+Richiesta `multipart/form-data` con i campi `mediaType`, `title`, `saveToTv` e `file`.
