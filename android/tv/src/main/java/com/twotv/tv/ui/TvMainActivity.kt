@@ -1,19 +1,19 @@
 package com.twotv.tv.ui
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
-import android.webkit.WebResourceRequest
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.Toast
+import androidx.core.content.FileProvider
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
-import coil.load
+import com.twotv.tv.R
 import com.twotv.tv.databinding.ActivityTvMainBinding
 import com.twotv.tv.model.MediaCategory
 import com.twotv.tv.model.TvArchiveItem
@@ -27,7 +27,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.Inet4Address
 import java.net.NetworkInterface
-import java.net.URL
 
 class TvMainActivity : FragmentActivity() {
 
@@ -36,7 +35,7 @@ class TvMainActivity : FragmentActivity() {
     private var exoPlayer: ExoPlayer? = null
 
     private val archiveList = mutableListOf<TvArchiveItem>()
-    private val pairedDevices = mutableSetOf<String>()
+    private val pairedDevices = mutableListOf<DevicePairInfo>()
     private val PAIRING_TOKEN = "2tv-secret-tv-token"
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -45,11 +44,20 @@ class TvMainActivity : FragmentActivity() {
         binding = ActivityTvMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        binding.btnShowQrCode.setOnClickListener {
-            showQrCodeScreen()
+        // Setup bottom control bar buttons
+        binding.btnManagePairings.setOnClickListener {
+            showManagePairingsDialog()
         }
 
-        // Initialize components asynchronously in background thread to prevent startup delay/gray screen
+        binding.btnShowHistory.setOnClickListener {
+            showHistoryDialog()
+        }
+
+        binding.btnToggleQrCode.setOnClickListener {
+            toggleQrCodeVisibility()
+        }
+
+        // Initialize components asynchronously in background thread
         lifecycleScope.launch(Dispatchers.IO) {
             val ip = getLocalIpAddress()
 
@@ -69,21 +77,6 @@ class TvMainActivity : FragmentActivity() {
                 // Initialize ExoPlayer
                 exoPlayer = ExoPlayer.Builder(this@TvMainActivity).build()
                 binding.playerView.player = exoPlayer
-
-                // Initialize WebView for TV Web Pages
-                binding.webView.apply {
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.loadWithOverviewMode = true
-                    settings.useWideViewPort = true
-                    settings.allowFileAccess = true
-                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                    webViewClient = object : WebViewClient() {
-                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                            return false
-                        }
-                    }
-                }
 
                 binding.ipTextView.text = "IP TV: http://$ip:8080"
                 if (qrBitmap != null) {
@@ -126,17 +119,121 @@ class TvMainActivity : FragmentActivity() {
     }
 
     private fun handleDevicePaired(device: DevicePairInfo) {
-        val entry = "• ${device.deviceName} (${device.deviceIp})"
-        pairedDevices.add(entry)
+        val existingIndex = pairedDevices.indexOfFirst { it.deviceIp == device.deviceIp }
+        if (existingIndex != -1) {
+            pairedDevices[existingIndex] = device
+        } else {
+            pairedDevices.add(0, device)
+        }
 
+        // Hide QR code upon pairing to give clean screen view
         binding.qrCard.visibility = View.GONE
-        binding.pairedDevicesCard.visibility = View.VISIBLE
-        binding.pairedDevicesListText.text = pairedDevices.joinToString("\n")
+        Toast.makeText(this, "Dispositivo accoppiato: ${device.deviceName} (${device.deviceIp})", Toast.LENGTH_SHORT).show()
     }
 
-    private fun showQrCodeScreen() {
-        binding.pairedDevicesCard.visibility = View.GONE
-        binding.qrCard.visibility = View.VISIBLE
+    private fun toggleQrCodeVisibility() {
+        if (binding.qrCard.visibility == View.VISIBLE) {
+            binding.qrCard.visibility = View.GONE
+        } else {
+            binding.qrCard.visibility = View.VISIBLE
+            binding.qrCard.bringToFront()
+        }
+    }
+
+    private fun showManagePairingsDialog() {
+        val itemsText = if (pairedDevices.isEmpty()) {
+            arrayOf("Nessun dispositivo accoppiato al momento")
+        } else {
+            pairedDevices.map { "• ${it.deviceName} (${it.deviceIp})" }.toTypedArray()
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.paired_devices_title))
+            .setItems(itemsText) { _, index ->
+                if (pairedDevices.isNotEmpty()) {
+                    showUnpairConfirmDialog(index)
+                }
+            }
+            .setPositiveButton(getString(R.string.btn_qr_code)) { dialog, _ ->
+                binding.qrCard.visibility = View.VISIBLE
+                binding.qrCard.bringToFront()
+                dialog.dismiss()
+            }
+            .setNegativeButton("Chiudi", null)
+            .show()
+    }
+
+    private fun showUnpairConfirmDialog(index: Int) {
+        val device = pairedDevices[index]
+        AlertDialog.Builder(this)
+            .setTitle("Disaccoppia Dispositivo")
+            .setMessage("Rimuovere l'accoppiamento con ${device.deviceName} (${device.deviceIp})?")
+            .setPositiveButton("Rimuovi") { _, _ ->
+                pairedDevices.removeAt(index)
+                Toast.makeText(this, "Accoppiamento rimosso", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
+    private fun showHistoryDialog() {
+        if (archiveList.isEmpty()) {
+            AlertDialog.Builder(this)
+                .setTitle(getString(R.string.archive_title))
+                .setMessage(getString(R.string.no_history))
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+
+        val options = archiveList.map { item ->
+            val typeStr = when (item.category) {
+                MediaCategory.WEB -> "[LINK]"
+                MediaCategory.VIDEO, MediaCategory.AUDIO -> "[STREAM]"
+                else -> "[FILE]"
+            }
+            "$typeStr ${item.title}"
+        }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.archive_title))
+            .setItems(options) { _, index ->
+                showHistoryItemOptionsDialog(index)
+            }
+            .setNegativeButton("Chiudi", null)
+            .show()
+    }
+
+    private fun showHistoryItemOptionsDialog(index: Int) {
+        val item = archiveList[index]
+        val actionText = if (item.category == MediaCategory.VIDEO || item.category == MediaCategory.AUDIO) {
+            getString(R.string.btn_play)
+        } else {
+            getString(R.string.btn_open)
+        }
+
+        val choices = arrayOf(actionText, getString(R.string.btn_delete))
+
+        AlertDialog.Builder(this)
+            .setTitle(item.title)
+            .setItems(choices) { _, choiceIndex ->
+                when (choiceIndex) {
+                    0 -> openOrPlayMediaItem(item)
+                    1 -> {
+                        if (item.isLocalFile) {
+                            try {
+                                File(item.pathOrUrl).delete()
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
+                        archiveList.removeAt(index)
+                        Toast.makeText(this, "Elemento eliminato dalla cronologia", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
     }
 
     private fun handleReceivedMedia(payload: TvPlayPayload) {
@@ -154,36 +251,21 @@ class TvMainActivity : FragmentActivity() {
             isLocalFile = isLocal
         )
 
-        if (payload.saveToTv || isLocal) {
-            archiveList.add(0, archiveItem)
-        }
-
-        playItem(archiveItem)
+        archiveList.add(0, archiveItem)
+        openOrPlayMediaItem(archiveItem)
     }
 
-    private fun playItem(item: TvArchiveItem) {
+    private fun openOrPlayMediaItem(item: TvArchiveItem) {
         binding.nowPlayingBanner.visibility = View.VISIBLE
         binding.nowPlayingTitle.text = item.title
         binding.nowPlayingUrl.text = item.pathOrUrl
         binding.mediaTypeBadge.text = item.category.name
+        binding.nowPlayingBanner.bringToFront()
 
-        binding.idleContainer.visibility = View.GONE
-        binding.playerView.visibility = View.GONE
-        binding.imageView.visibility = View.GONE
-        binding.webView.visibility = View.GONE
-
-        when (item.category) {
-            MediaCategory.FOTO -> {
-                binding.imageView.visibility = View.VISIBLE
-                binding.imageView.bringToFront()
-                if (item.isLocalFile) {
-                    binding.imageView.load(File(item.pathOrUrl))
-                } else {
-                    binding.imageView.load(item.pathOrUrl)
-                }
-            }
-
-            MediaCategory.VIDEO, MediaCategory.AUDIO -> {
+        when {
+            // STREAM (Video or Audio stream): Play natively inside 2TV ExoPlayer
+            item.category == MediaCategory.VIDEO || item.category == MediaCategory.AUDIO -> {
+                binding.idleContainer.visibility = View.GONE
                 binding.playerView.visibility = View.VISIBLE
                 binding.playerView.bringToFront()
                 binding.playerView.requestFocus()
@@ -193,59 +275,75 @@ class TvMainActivity : FragmentActivity() {
                 exoPlayer?.play()
             }
 
-            MediaCategory.WEB -> {
-                binding.webView.visibility = View.VISIBLE
-                binding.webView.bringToFront()
-                binding.webView.requestFocus()
-                var validUrl = item.pathOrUrl
-                if (!validUrl.startsWith("http://") && !validUrl.startsWith("https://")) {
-                    validUrl = "https://$validUrl"
-                }
-                binding.webView.loadUrl(validUrl)
+            // WEB LINK: Open with default TV Web Browser application
+            item.category == MediaCategory.WEB -> {
+                stopPlaybackAndShowHome()
+                openWebLinkWithDefaultBrowser(item.pathOrUrl)
             }
 
-            MediaCategory.ALTRO -> {
-                if (item.pathOrUrl.startsWith("http://") || item.pathOrUrl.startsWith("https://")) {
-                    downloadFileToTv(item.pathOrUrl, item.title)
-                } else {
-                    Toast.makeText(this, "File Locale TV: ${item.pathOrUrl}", Toast.LENGTH_LONG).show()
-                }
-                binding.idleContainer.visibility = View.VISIBLE
+            // FILE (Photos, Documents, Local Files): Open with default external TV app via FileProvider
+            else -> {
+                stopPlaybackAndShowHome()
+                openFileWithDefaultApp(item.pathOrUrl)
             }
         }
 
         binding.root.postDelayed({
             binding.nowPlayingBanner.visibility = View.GONE
-        }, 5000)
+        }, 4000)
     }
 
-    private fun downloadFileToTv(urlStr: String, title: String) {
-        Toast.makeText(this, "Download avviato per: $title", Toast.LENGTH_SHORT).show()
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val downloadsDir = File(filesDir, "downloads").apply { mkdirs() }
-                val fileName = title.ifBlank { urlStr.substringAfterLast("/") }.substringBefore("?")
-                val destFile = File(downloadsDir, fileName.ifBlank { "downloaded_file_${System.currentTimeMillis()}" })
-
-                URL(urlStr).openStream().use { input ->
-                    destFile.outputStream().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@TvMainActivity, "Download completato: ${destFile.name}", Toast.LENGTH_LONG).show()
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@TvMainActivity, "Errore download: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                }
+    private fun openWebLinkWithDefaultBrowser(urlStr: String) {
+        try {
+            var validUrl = urlStr
+            if (!validUrl.startsWith("http://") && !validUrl.startsWith("https://")) {
+                validUrl = "https://$validUrl"
             }
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(validUrl)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Impossibile aprire il browser predefinito: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
     }
 
+    private fun openFileWithDefaultApp(pathOrUrl: String) {
+        try {
+            val file = File(pathOrUrl)
+            if (file.exists()) {
+                val uri: Uri = FileProvider.getUriForFile(this, "com.twotv.tv.fileprovider", file)
+                val mimeType = getMimeTypeFromExtension(file.extension)
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, mimeType)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(Intent.createChooser(intent, "Apri file con..."))
+            } else if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pathOrUrl)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
+            } else {
+                Toast.makeText(this, "File non trovato sul dispositivo: $pathOrUrl", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Nessuna app predefinita per aprire il file: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun getMimeTypeFromExtension(ext: String): String = when (ext.lowercase()) {
+        "mp4", "mkv", "avi", "mov", "webm" -> "video/*"
+        "jpg", "jpeg", "png", "gif", "webp", "bmp" -> "image/*"
+        "mp3", "aac", "wav", "flac", "ogg" -> "audio/*"
+        "pdf" -> "application/pdf"
+        "apk" -> "application/vnd.android.package-archive"
+        else -> "*/*"
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK && binding.idleContainer.visibility != View.VISIBLE) {
+        if (keyCode == KeyEvent.KEYCODE_BACK && binding.playerView.visibility == View.VISIBLE) {
             stopPlaybackAndShowHome()
             return true
         }
@@ -255,8 +353,6 @@ class TvMainActivity : FragmentActivity() {
     private fun stopPlaybackAndShowHome() {
         exoPlayer?.stop()
         binding.playerView.visibility = View.GONE
-        binding.imageView.visibility = View.GONE
-        binding.webView.visibility = View.GONE
         binding.idleContainer.visibility = View.VISIBLE
     }
 

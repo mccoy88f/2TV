@@ -3,8 +3,16 @@
     <string name="tv_subtitle">Scan the QR Code with 2TV Android App to share content</string>
     <string name="paired_devices_title">Paired Devices</string>
     <string name="btn_new_pairing">New Pairing (QR Code)</string>
+    <string name="btn_manage_pairings">Manage Pairings</string>
+    <string name="btn_history">Received History</string>
+    <string name="btn_qr_code">Show QR Code</string>
+    <string name="btn_open">Open</string>
+    <string name="btn_play">Play</string>
+    <string name="btn_delete">Delete</string>
+    <string name="no_history">No received content in history</string>
+    <string name="unpair_device">Remove Pairing</string>
     <string name="now_playing">Now Playing</string>
-    <string name="archive_title">TV Archive</string>
+    <string name="archive_title">TV History</string>
     <string name="cat_all">All</string>
     <string name="cat_photo">Photos</string>
     <string name="cat_video">Videos</string>
