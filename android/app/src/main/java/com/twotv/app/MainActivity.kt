@@ -167,12 +167,13 @@ class MainActivity : ComponentActivity() {
                                 viewModel.sendCurrentContent(targetTv = selectedTv)
                             },
                             onCopyLink = {
-                                val textToCopy = viewModel.inputUrl.value
-                                if (textToCopy.isNotBlank()) {
+                                val rawUrl = viewModel.inputUrl.value
+                                if (rawUrl.isNotBlank()) {
+                                    val formatted2TvUrl = if (rawUrl.startsWith("2tv://")) rawUrl else "2tv://$rawUrl"
                                     val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    val clip = ClipData.newPlainText("2TV Stream Link", textToCopy)
+                                    val clip = ClipData.newPlainText("2TV Stream Link", formatted2TvUrl)
                                     clipboard.setPrimaryClip(clip)
-                                    Toast.makeText(this@MainActivity, getString(R.string.link_copied), Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(this@MainActivity, "Link 2TV copiato negli appunti!", Toast.LENGTH_SHORT).show()
                                 }
                                 showTvShareDialog = false
                                 intent?.action = null
@@ -250,12 +251,10 @@ class MainActivity : ComponentActivity() {
 
     private fun parse2TvSchemeUrl(uri: Uri): String {
         val raw = uri.toString()
-        // e.g. 2tv://https://example.com/stream.m3u8 -> https://example.com/stream.m3u8
         var clean = raw.removePrefix("2tv://")
         if (!clean.startsWith("http://") && !clean.startsWith("https://")) {
             val queryUrl = uri.getQueryParameter("url")
             if (!queryUrl.isNullOrEmpty()) {
-
                 clean = queryUrl
             } else if (!clean.startsWith("http")) {
                 clean = "https://$clean"
