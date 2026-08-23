@@ -59,10 +59,11 @@ fun AboutDialog(
                         style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
                     )
                     Text(
-                        text = stringResource(R.string.version, com.twotv.app.BuildConfig.VERSION_NAME),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "v${com.twotv.app.BuildConfig.VERSION_NAME}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
                     )
+
 
                 }
 
