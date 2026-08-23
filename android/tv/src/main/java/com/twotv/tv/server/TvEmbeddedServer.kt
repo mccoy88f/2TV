@@ -10,6 +10,7 @@ import io.ktor.server.plugins.origin
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.utils.io.jvm.javaio.toInputStream
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
@@ -17,17 +18,17 @@ import java.io.InputStream
 
 @Serializable
 data class TvPlayPayload(
-    val command: String,
-    val mediaType: String,
-    val url: String,
-    val title: String,
+    val command: String = "PLAY",
+    val mediaType: String = "VIDEO",
+    val url: String = "",
+    val title: String = "",
     val saveToTv: Boolean = false
 )
 
 @Serializable
 data class DevicePairInfo(
-    val deviceName: String,
-    val deviceIp: String,
+    val deviceName: String = "Mobile Device",
+    val deviceIp: String = "",
     val timestamp: Long = System.currentTimeMillis()
 )
 
@@ -41,14 +42,18 @@ class TvEmbeddedServer(
     private val onUploadFinished: () -> Unit = {}
 ) {
     private var server: EmbeddedServer<*, *>? = null
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        coerceInputValues = true
+    }
 
     fun start() {
         server = embeddedServer(CIO, port = port) {
             routing {
                 get("/api/ping") {
                     call.respondText(
-                        text = """{"status":"online","server":"2TV Receiver"}""",
+                        text = """{"success":true,"message":"online"}""",
                         contentType = ContentType.Application.Json,
                         status = HttpStatusCode.OK
                     )
@@ -73,11 +78,10 @@ class TvEmbeddedServer(
                 }
 
                 post("/api/verify") {
-                    val token = call.request.headers["X-Pairing-Token"]
                     val clientIp = call.request.origin.remoteHost
                     onDevicePaired(DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp))
                     call.respondText(
-                        text = """{"valid":true}""",
+                        text = """{"success":true,"message":"Token valid"}""",
                         contentType = ContentType.Application.Json,
                         status = HttpStatusCode.OK
                     )
@@ -98,7 +102,7 @@ class TvEmbeddedServer(
                         )
                     } catch (e: Exception) {
                         call.respondText(
-                            text = """{"success":false,"message":"${e.localizedMessage ?: "Error playing"}"}""",
+                            text = """{"success":false,"message":"Errore decodifica: ${e.localizedMessage}"}""",
                             contentType = ContentType.Application.Json,
                             status = HttpStatusCode.OK
                         )
@@ -141,8 +145,7 @@ class TvEmbeddedServer(
                                     var totalBytesRead = 0L
                                     val buffer = ByteArray(32768)
 
-                                    @Suppress("DEPRECATION")
-                                    val inputStream: InputStream = part.streamProvider()
+                                    val inputStream: InputStream = part.provider().toInputStream()
 
                                     destFile.outputStream().use { output ->
                                         inputStream.use { input ->
