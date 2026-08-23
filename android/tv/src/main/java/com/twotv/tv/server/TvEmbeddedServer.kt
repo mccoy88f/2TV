@@ -88,7 +88,7 @@ class TvEmbeddedServer(
                         onPlayMedia(payload)
                         call.respond(HttpStatusCode.OK, mapOf("success" to true, "message" to "Playback started"))
                     } catch (e: Exception) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("success" to false, "message" to e.localizedMessage))
+                        call.respond(HttpStatusCode.BadRequest, mapOf("success" to false, "message" to (e.localizedMessage ?: "Errore play")))
                     }
                 }
 
@@ -96,65 +96,78 @@ class TvEmbeddedServer(
                     val clientIp = call.request.origin.remoteHost
                     onDevicePaired(DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp))
 
-                    val multipart = call.receiveMultipart()
-                    var title = "File Ricevuto"
-                    var mediaType = "VIDEO"
-                    var saveToTv = false
-                    var savedFile: File? = null
+                    try {
+                        val multipart = call.receiveMultipart()
+                        var title = "File Ricevuto"
+                        var mediaType = "VIDEO"
+                        var saveToTv = false
+                        var savedFile: File? = null
 
-                    val contentLength = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: 1L
+                        val contentLength = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: 1L
 
-                    multipart.forEachPart { part ->
-                        when (part) {
-                            is PartData.FormItem -> {
-                                when (part.name) {
-                                    "title" -> title = part.value
-                                    "mediaType" -> mediaType = part.value
-                                    "saveToTv" -> saveToTv = part.value.toBoolean()
-                                }
-                            }
-                            is PartData.FileItem -> {
-                                val fileName = title.ifBlank { part.originalFileName ?: "file_${System.currentTimeMillis()}" }
-                                val storageDir = File(context.filesDir, "media").apply { mkdirs() }
-                                val destFile = File(storageDir, fileName)
-
-                                val inputStream: InputStream = part.streamProvider()
-                                var totalBytesRead = 0L
-                                val buffer = ByteArray(16384)
-
-                                destFile.outputStream().use { output ->
-                                    inputStream.use { input ->
-                                        var bytes: Int
-                                        while (input.read(buffer).also { bytes = it } != -1) {
-                                            output.write(buffer, 0, bytes)
-                                            totalBytesRead += bytes
-                                            val percent = ((totalBytesRead * 100) / contentLength).toInt().coerceIn(0, 99)
-                                            onUploadProgress(fileName, percent)
-                                        }
+                        multipart.forEachPart { part ->
+                            when (part) {
+                                is PartData.FormItem -> {
+                                    when (part.name) {
+                                        "title" -> title = part.value
+                                        "mediaType" -> mediaType = part.value
+                                        "saveToTv" -> saveToTv = part.value.toBoolean()
                                     }
                                 }
-                                savedFile = destFile
-                                onUploadProgress(fileName, 100)
+                                is PartData.FileItem -> {
+                                    val originalName = part.originalFileName ?: "file_${System.currentTimeMillis()}"
+                                    val fileName = if (title.isNotBlank() && title != "File Ricevuto") {
+                                        if (title.contains(".")) title else "$title.${originalName.substringAfterLast(".", "bin")}"
+                                    } else {
+                                        originalName
+                                    }
+
+                                    val storageDir = File(context.filesDir, "media").apply { mkdirs() }
+                                    val destFile = File(storageDir, fileName)
+
+                                    var totalBytesRead = 0L
+                                    val buffer = ByteArray(16384)
+
+                                    @Suppress("DEPRECATION")
+                                    val inputStream: InputStream = part.streamProvider()
+
+                                    destFile.outputStream().use { output ->
+                                        inputStream.use { input ->
+                                            var bytes: Int
+                                            while (input.read(buffer).also { bytes = it } != -1) {
+                                                output.write(buffer, 0, bytes)
+                                                totalBytesRead += bytes
+                                                val percent = if (contentLength > 0) ((totalBytesRead * 100) / contentLength).toInt().coerceIn(0, 99) else 50
+                                                onUploadProgress(fileName, percent)
+                                            }
+                                        }
+                                    }
+                                    savedFile = destFile
+                                    onUploadProgress(fileName, 100)
+                                }
+                                else -> {}
                             }
-                            else -> {}
+                            part.dispose()
                         }
-                        part.dispose()
-                    }
 
-                    onUploadFinished()
+                        onUploadFinished()
 
-                    if (savedFile != null) {
-                        val payload = TvPlayPayload(
-                            command = "PLAY",
-                            mediaType = mediaType,
-                            url = savedFile!!.absolutePath,
-                            title = title,
-                            saveToTv = saveToTv
-                        )
-                        onPlayMedia(payload)
-                        call.respond(HttpStatusCode.OK, mapOf("success" to true, "message" to "File uploaded and playing"))
-                    } else {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("success" to false, "message" to "No file received"))
+                        if (savedFile != null) {
+                            val payload = TvPlayPayload(
+                                command = "PLAY",
+                                mediaType = mediaType,
+                                url = savedFile!!.absolutePath,
+                                title = title,
+                                saveToTv = saveToTv
+                            )
+                            onPlayMedia(payload)
+                            call.respond(HttpStatusCode.OK, mapOf("success" to true, "message" to "File uploaded and playing"))
+                        } else {
+                            call.respond(HttpStatusCode.BadRequest, mapOf("success" to false, "message" to "No file received"))
+                        }
+                    } catch (e: Exception) {
+                        onUploadFinished()
+                        call.respond(HttpStatusCode.InternalServerError, mapOf("success" to false, "message" to (e.localizedMessage ?: "Errore server durante l'upload")))
                     }
                 }
             }

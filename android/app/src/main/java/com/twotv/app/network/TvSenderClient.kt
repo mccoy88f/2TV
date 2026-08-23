@@ -14,6 +14,7 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.Dispatchers
@@ -46,12 +47,16 @@ class TvSenderClient {
     suspend fun sendPairingRequest(tv: PairedTv): Result<TvResponse> {
         return try {
             val urlString = "http://${tv.ip}:${tv.port}/api/pair"
-            val response: TvResponse = httpClient.post(urlString) {
+            val httpResponse = httpClient.post(urlString) {
                 contentType(ContentType.Application.Json)
                 header("X-Pairing-Token", tv.pairingToken)
                 setBody(DevicePairRequest())
-            }.body()
-            Result.success(response)
+            }
+            if (httpResponse.status == HttpStatusCode.OK) {
+                Result.success(httpResponse.body())
+            } else {
+                Result.failure(Exception("Status ${httpResponse.status}"))
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -60,16 +65,22 @@ class TvSenderClient {
     suspend fun sendContentToTv(tv: PairedTv, payload: MediaPayload): Result<TvResponse> {
         return try {
             val urlString = "http://${tv.ip}:${tv.port}/api/play"
-            val response: TvResponse = httpClient.post(urlString) {
+            val httpResponse = httpClient.post(urlString) {
                 contentType(ContentType.Application.Json)
                 header("X-Pairing-Token", tv.pairingToken)
                 setBody(payload)
-            }.body()
+            }
 
-            if (response.success) {
-                Result.success(response)
+            if (httpResponse.status == HttpStatusCode.OK) {
+                val response: TvResponse = httpResponse.body()
+                if (response.success) {
+                    Result.success(response)
+                } else {
+                    Result.failure(Exception(response.message))
+                }
             } else {
-                Result.failure(Exception(response.message))
+                val errText = try { httpResponse.bodyAsText() } catch (e: Exception) { "Status ${httpResponse.status}" }
+                Result.failure(Exception("Errore TV (${httpResponse.status.value}): $errText"))
             }
         } catch (e: Exception) {
             Result.failure(Exception("Impossibile connettersi alla TV ${tv.name} (${tv.ip}:${tv.port}): ${e.localizedMessage}"))
@@ -90,7 +101,7 @@ class TvSenderClient {
                 ?: return@withContext Result.failure(Exception("Impossibile aprire il file selezionato"))
 
             val fileName = title.ifBlank { getFileNameFromUri(context, fileUri) }
-            val tempCacheFile = File(context.cachePhaseDir, "upload_${System.currentTimeMillis()}_$fileName")
+            val tempCacheFile = File(context.cacheDir, "upload_${System.currentTimeMillis()}_$fileName")
             tempCacheFile.parentFile?.mkdirs()
 
             // Stream file to temp cache file first to prevent OOM
@@ -104,7 +115,7 @@ class TvSenderClient {
             tempCacheFile.delete() // Clean cache
 
             val urlString = "http://${tv.ip}:${tv.port}/api/upload"
-            val response: TvResponse = httpClient.submitFormWithBinaryData(
+            val httpResponse = httpClient.submitFormWithBinaryData(
                 url = urlString,
                 formData = formData {
                     append("mediaType", mediaType.name)
@@ -117,12 +128,18 @@ class TvSenderClient {
                 }
             ) {
                 header("X-Pairing-Token", tv.pairingToken)
-            }.body()
+            }
 
-            if (response.success) {
-                Result.success(response)
+            if (httpResponse.status == HttpStatusCode.OK) {
+                val response: TvResponse = httpResponse.body()
+                if (response.success) {
+                    Result.success(response)
+                } else {
+                    Result.failure(Exception(response.message))
+                }
             } else {
-                Result.failure(Exception(response.message))
+                val errText = try { httpResponse.bodyAsText() } catch (e: Exception) { "Status ${httpResponse.status}" }
+                Result.failure(Exception("Errore risposta TV (${httpResponse.status.value}): $errText"))
             }
         } catch (e: Exception) {
             Result.failure(Exception("Errore durante l'invio del file alla TV ${tv.name}: ${e.localizedMessage}"))
@@ -169,6 +186,3 @@ class TvSenderClient {
         MediaType.STREAM -> "application/x-mpegURL"
     }
 }
-
-private val Context.cachePhaseDir: File
-    get() = cacheDir
