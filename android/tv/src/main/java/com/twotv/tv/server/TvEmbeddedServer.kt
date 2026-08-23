@@ -28,6 +28,13 @@ data class TvPlayPayload(
 )
 
 @Serializable
+data class DevicePairInfo(
+    val deviceName: String,
+    val deviceIp: String = "",
+    val timestamp: Long = System.currentTimeMillis()
+)
+
+@Serializable
 data class TvSimpleResponse(
     val success: Boolean,
     val message: String
@@ -37,7 +44,8 @@ class TvEmbeddedServer(
     private val context: Context,
     val port: Int = 8080,
     val pairingToken: String = "2tv-secret-tv-token",
-    private val onPlayMedia: (TvPlayPayload) -> Unit
+    private val onPlayMedia: (TvPlayPayload) -> Unit,
+    private val onDevicePaired: (DevicePairInfo) -> Unit
 ) {
     private var server: EmbeddedServer<*, *>? = null
 
@@ -57,8 +65,31 @@ class TvEmbeddedServer(
                     call.respond(TvSimpleResponse(true, "Android TV 2TV Receiver Online"))
                 }
 
+                post("/api/pair") {
+                    try {
+                        val device = call.receive<DevicePairInfo>()
+                        val clientIp = call.request.local.remoteHost
+                        val pairedInfo = DevicePairInfo(
+                            deviceName = device.deviceName.ifBlank { "Dispositivo Mobile ($clientIp)" },
+                            deviceIp = clientIp
+                        )
+                        onDevicePaired(pairedInfo)
+                        call.respond(TvSimpleResponse(true, "Abbinamento completato con successo!"))
+                    } catch (e: Exception) {
+                        val clientIp = call.request.local.remoteHost
+                        val pairedInfo = DevicePairInfo(
+                            deviceName = "Smartphone Android ($clientIp)",
+                            deviceIp = clientIp
+                        )
+                        onDevicePaired(pairedInfo)
+                        call.respond(TvSimpleResponse(true, "Abbinato"))
+                    }
+                }
+
                 get("/api/verify") {
                     val token = call.request.headers["X-Pairing-Token"]
+                    val clientIp = call.request.local.remoteHost
+                    onDevicePaired(DevicePairInfo("Smartphone ($clientIp)", clientIp))
                     if (token == pairingToken || token == null) {
                         call.respond(HttpStatusCode.OK, TvSimpleResponse(true, "Verified"))
                     } else {
@@ -68,6 +99,8 @@ class TvEmbeddedServer(
 
                 post("/api/play") {
                     try {
+                        val clientIp = call.request.local.remoteHost
+                        onDevicePaired(DevicePairInfo("Smartphone ($clientIp)", clientIp))
                         val payload = call.receive<TvPlayPayload>()
                         onPlayMedia(payload)
                         call.respond(TvSimpleResponse(true, "Riproduzione avviata per: ${payload.title}"))
@@ -78,6 +111,8 @@ class TvEmbeddedServer(
 
                 post("/api/upload") {
                     try {
+                        val clientIp = call.request.local.remoteHost
+                        onDevicePaired(DevicePairInfo("Smartphone ($clientIp)", clientIp))
                         val multipart = call.receiveMultipart()
                         var mediaType = "VIDEO"
                         var title = "File Ricevuto"

@@ -11,6 +11,7 @@ import coil.load
 import com.twotv.tv.databinding.ActivityTvMainBinding
 import com.twotv.tv.model.MediaCategory
 import com.twotv.tv.model.TvArchiveItem
+import com.twotv.tv.server.DevicePairInfo
 import com.twotv.tv.server.TvEmbeddedServer
 import com.twotv.tv.server.TvPlayPayload
 import com.twotv.tv.util.QrCodeGenerator
@@ -25,6 +26,7 @@ class TvMainActivity : FragmentActivity() {
     private var exoPlayer: ExoPlayer? = null
 
     private val archiveList = mutableListOf<TvArchiveItem>()
+    private val pairedDevices = mutableSetOf<String>()
     private val PAIRING_TOKEN = "2tv-secret-tv-token"
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,11 +34,11 @@ class TvMainActivity : FragmentActivity() {
         binding = ActivityTvMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Initialize ExoPlayer for Leanback TV playback
+        // Initialize ExoPlayer
         exoPlayer = ExoPlayer.Builder(this).build()
         binding.playerView.player = exoPlayer
 
-        // Get local Wi-Fi IP and start embedded server
+        // Get IP and generate QR Code
         val ip = getLocalIpAddress()
         binding.ipTextView.text = "IP TV: http://$ip:8080"
 
@@ -55,16 +57,44 @@ class TvMainActivity : FragmentActivity() {
             binding.qrImageView.setImageBitmap(qrBitmap)
         }
 
+        // Button to trigger new QR Code pairing
+        binding.btnShowQrCode.setOnClickListener {
+            showQrCodeScreen()
+        }
+
+        // Start Ktor HTTP Server
         embeddedServer = TvEmbeddedServer(
             context = applicationContext,
             port = 8080,
-            pairingToken = PAIRING_TOKEN
-        ) { payload ->
-            runOnUiThread {
-                handleReceivedMedia(payload)
+            pairingToken = PAIRING_TOKEN,
+            onPlayMedia = { payload ->
+                runOnUiThread {
+                    handleReceivedMedia(payload)
+                }
+            },
+            onDevicePaired = { device ->
+                runOnUiThread {
+                    handleDevicePaired(device)
+                }
             }
-        }
+        )
         embeddedServer?.start()
+    }
+
+    private fun handleDevicePaired(device: DevicePairInfo) {
+        val entry = "• ${device.deviceName} (${device.deviceIp})"
+        pairedDevices.add(entry)
+
+        // Hide QR Code and show active paired devices list
+        binding.qrCard.visibility = View.GONE
+        binding.pairedDevicesCard.visibility = View.VISIBLE
+
+        binding.pairedDevicesListText.text = pairedDevices.joinToString("\n")
+    }
+
+    private fun showQrCodeScreen() {
+        binding.pairedDevicesCard.visibility = View.GONE
+        binding.qrCard.visibility = View.VISIBLE
     }
 
     private fun handleReceivedMedia(payload: TvPlayPayload) {
@@ -124,7 +154,6 @@ class TvMainActivity : FragmentActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        // TV Remote Back key stops current playback and returns to QR code home screen
         if (keyCode == KeyEvent.KEYCODE_BACK && binding.idleContainer.visibility != View.VISIBLE) {
             stopPlaybackAndShowHome()
             return true

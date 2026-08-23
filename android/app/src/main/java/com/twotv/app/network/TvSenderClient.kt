@@ -2,6 +2,7 @@ package com.twotv.app.network
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import com.twotv.app.data.model.MediaPayload
 import com.twotv.app.data.model.MediaType
 import com.twotv.app.data.model.PairedTv
@@ -16,8 +17,15 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.InputStream
+
+@Serializable
+data class DevicePairRequest(
+    val deviceName: String = "${Build.MANUFACTURER} ${Build.MODEL}",
+    val timestamp: Long = System.currentTimeMillis()
+)
 
 class TvSenderClient {
 
@@ -29,7 +37,21 @@ class TvSenderClient {
             })
         }
         engine {
-            requestTimeout = 120000 // 2 minutes timeout for large file uploads
+            requestTimeout = 120000
+        }
+    }
+
+    suspend fun sendPairingRequest(tv: PairedTv): Result<TvResponse> {
+        return try {
+            val urlString = "http://${tv.ip}:${tv.port}/api/pair"
+            val response: TvResponse = httpClient.post(urlString) {
+                contentType(ContentType.Application.Json)
+                header("X-Pairing-Token", tv.pairingToken)
+                setBody(DevicePairRequest())
+            }.body()
+            Result.success(response)
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 

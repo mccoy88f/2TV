@@ -189,6 +189,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             viewModelScope.launch {
                 tvDao.insertOrUpdateTv(pairedTv)
                 tvDao.selectTv(tvId)
+                senderClient.sendPairingRequest(pairedTv)
             }
             true
         } catch (e: Exception) {
@@ -210,8 +211,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             tvDao.insertOrUpdateTv(tv)
             tvDao.selectTv(tvId)
+            senderClient.sendPairingRequest(tv)
         }
     }
+
 
     fun selectTv(tvId: String) {
         viewModelScope.launch {
