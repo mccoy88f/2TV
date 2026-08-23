@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,7 +22,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.twotv.app.R
-import com.twotv.app.data.model.MediaType
 import com.twotv.app.data.model.PairedTv
 import com.twotv.app.ui.MainViewModel
 import com.twotv.app.ui.SendCategoryMode
@@ -35,6 +35,7 @@ fun HomeScreen(
     onOpenTvsScreen: () -> Unit
 ) {
     val selectedTv by viewModel.selectedTv.collectAsState()
+    val isTvOnline by viewModel.isTvOnline.collectAsState()
     val sendMode by viewModel.sendCategoryMode.collectAsState()
     val url by viewModel.inputUrl.collectAsState()
     val title by viewModel.inputTitle.collectAsState()
@@ -62,11 +63,13 @@ fun HomeScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Active TV Header Card
+        // Active TV Header Card with Connection Status Indicator
         ActiveTvCard(
             selectedTv = selectedTv,
+            isTvOnline = isTvOnline,
             onOpenQrScanner = onOpenQrScanner,
-            onOpenTvsScreen = onOpenTvsScreen
+            onOpenTvsScreen = onOpenTvsScreen,
+            onRefreshConnection = { viewModel.checkConnectionStatus() }
         )
 
         // Status Banner if any
@@ -206,7 +209,6 @@ fun HomeScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
@@ -332,68 +334,16 @@ fun HomeScreen(
                 }
             }
         }
-
-        // Quick Sample Media Presets Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.quick_presets),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-
-                SamplePresetItem(
-                    title = "Video Stream MP4 (Big Buck Bunny)",
-                    subtitle = "Stream Video Direct",
-                    type = MediaType.VIDEO,
-                    url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-                    onSelect = { url, type, title ->
-                        viewModel.setSendCategoryMode(SendCategoryMode.STREAM)
-                        viewModel.setUrl(url)
-                        viewModel.setMediaType(type)
-                        viewModel.setTitle(title)
-                    }
-                )
-
-                SamplePresetItem(
-                    title = "Live Stream HLS (.m3u8)",
-                    subtitle = "Stream Live HLS Mux",
-                    type = MediaType.STREAM,
-                    url = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
-                    onSelect = { url, type, title ->
-                        viewModel.setSendCategoryMode(SendCategoryMode.STREAM)
-                        viewModel.setUrl(url)
-                        viewModel.setMediaType(type)
-                        viewModel.setTitle(title)
-                    }
-                )
-
-                SamplePresetItem(
-                    title = "Wikipedia Web Link",
-                    subtitle = "Web Link",
-                    type = MediaType.IMAGE,
-                    url = "https://wikipedia.org",
-                    onSelect = { url, _, title ->
-                        viewModel.setSendCategoryMode(SendCategoryMode.LINK)
-                        viewModel.setUrl(url)
-                        viewModel.setTitle(title)
-                    }
-                )
-            }
-        }
     }
 }
 
 @Composable
 private fun ActiveTvCard(
     selectedTv: PairedTv?,
+    isTvOnline: Boolean?,
     onOpenQrScanner: () -> Unit,
-    onOpenTvsScreen: () -> Unit
+    onOpenTvsScreen: () -> Unit,
+    onRefreshConnection: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -433,12 +383,34 @@ private fun ActiveTvCard(
 
                 Column {
                     if (selectedTv != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = selectedTv.name,
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            // Online/Offline status dot
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        when (isTvOnline) {
+                                            true -> Color(0xFF00E676)
+                                            false -> Color(0xFFFF5252)
+                                            null -> Color.Gray
+                                        }
+
+                                    )
+                            )
+                        }
+
                         Text(
-                            text = selectedTv.name,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                        )
-                        Text(
-                            text = "${selectedTv.ip}:${selectedTv.port} • ${selectedTv.platform}",
+                            text = "${selectedTv.ip}:${selectedTv.port} • " + when (isTvOnline) {
+                                true -> "Connessa"
+                                false -> "Non raggiungibile"
+                                null -> "Verifica in corso..."
+                            },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -457,6 +429,11 @@ private fun ActiveTvCard(
             }
 
             Row {
+                if (selectedTv != null) {
+                    IconButton(onClick = onRefreshConnection) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Aggiorna Connessione")
+                    }
+                }
                 IconButton(onClick = onOpenQrScanner) {
                     Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.scan_qr))
                 }
@@ -464,44 +441,6 @@ private fun ActiveTvCard(
                     Icon(Icons.Default.SwapHoriz, contentDescription = stringResource(R.string.switch_tv))
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun SamplePresetItem(
-    title: String,
-    subtitle: String,
-    type: MediaType,
-    url: String,
-    onSelect: (url: String, type: MediaType, title: String) -> Unit
-) {
-    Surface(
-        onClick = { onSelect(url, type, title) },
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = when (type) {
-                    MediaType.VIDEO -> Icons.Default.Movie
-                    MediaType.IMAGE -> Icons.Default.Image
-                    MediaType.AUDIO -> Icons.Default.MusicNote
-                    MediaType.STREAM -> Icons.Default.LiveTv
-                },
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold))
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

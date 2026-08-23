@@ -8,160 +8,153 @@ import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.origin
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 import java.io.File
+import java.io.InputStream
 
 @Serializable
 data class TvPlayPayload(
-    val command: String = "PLAY",
+    val command: String,
     val mediaType: String,
     val url: String,
     val title: String,
-    val saveToTv: Boolean = false,
-    val timestamp: Long = System.currentTimeMillis()
+    val saveToTv: Boolean = false
 )
 
 @Serializable
 data class DevicePairInfo(
     val deviceName: String,
-    val deviceIp: String = "",
+    val deviceIp: String,
     val timestamp: Long = System.currentTimeMillis()
-)
-
-@Serializable
-data class TvSimpleResponse(
-    val success: Boolean,
-    val message: String
 )
 
 class TvEmbeddedServer(
     private val context: Context,
-    val port: Int = 8080,
-    val pairingToken: String = "2tv-secret-tv-token",
+    private val port: Int = 8080,
+    private val pairingToken: String,
     private val onPlayMedia: (TvPlayPayload) -> Unit,
-    private val onDevicePaired: (DevicePairInfo) -> Unit
+    private val onDevicePaired: (DevicePairInfo) -> Unit,
+    private val onUploadProgress: (title: String, percentage: Int) -> Unit = { _, _ -> },
+    private val onUploadFinished: () -> Unit = {}
 ) {
     private var server: EmbeddedServer<*, *>? = null
 
     fun start() {
-        if (server != null) return
-
-        server = embeddedServer(CIO, port = port, host = "0.0.0.0") {
+        server = embeddedServer(CIO, port = port) {
             install(ContentNegotiation) {
-                json(Json {
-                    ignoreUnknownKeys = true
-                    isLenient = true
-                })
+                json()
             }
 
             routing {
                 get("/api/ping") {
-                    call.respond(TvSimpleResponse(true, "Android TV 2TV Receiver Online"))
+                    call.respond(HttpStatusCode.OK, mapOf("status" to "online", "server" to "2TV Receiver"))
                 }
 
                 post("/api/pair") {
+                    val clientIp = call.request.origin.remoteHost
                     try {
-                        val device = call.receive<DevicePairInfo>()
-                        val clientIp = call.request.local.remoteHost
-                        val pairedInfo = DevicePairInfo(
-                            deviceName = device.deviceName.ifBlank { "Dispositivo Mobile ($clientIp)" },
-                            deviceIp = clientIp
-                        )
-                        onDevicePaired(pairedInfo)
-                        call.respond(TvSimpleResponse(true, "Abbinamento completato con successo!"))
+                        val body = call.receive<DevicePairInfo>()
+                        val pairInfo = DevicePairInfo(deviceName = body.deviceName, deviceIp = clientIp)
+                        onDevicePaired(pairInfo)
+                        call.respond(HttpStatusCode.OK, mapOf("success" to true, "message" to "Device paired successfully"))
                     } catch (e: Exception) {
-                        val clientIp = call.request.local.remoteHost
-                        val pairedInfo = DevicePairInfo(
-                            deviceName = "Smartphone Android ($clientIp)",
-                            deviceIp = clientIp
-                        )
-                        onDevicePaired(pairedInfo)
-                        call.respond(TvSimpleResponse(true, "Abbinato"))
+                        val pairInfo = DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp)
+                        onDevicePaired(pairInfo)
+                        call.respond(HttpStatusCode.OK, mapOf("success" to true, "message" to "Device paired"))
                     }
                 }
 
-                get("/api/verify") {
+                post("/api/verify") {
                     val token = call.request.headers["X-Pairing-Token"]
-                    val clientIp = call.request.local.remoteHost
-                    onDevicePaired(DevicePairInfo("Smartphone ($clientIp)", clientIp))
-                    if (token == pairingToken || token == null) {
-                        call.respond(HttpStatusCode.OK, TvSimpleResponse(true, "Verified"))
+                    if (token == pairingToken || token != null) {
+                        val clientIp = call.request.origin.remoteHost
+                        onDevicePaired(DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp))
+                        call.respond(HttpStatusCode.OK, mapOf("valid" to true))
                     } else {
-                        call.respond(HttpStatusCode.Unauthorized, TvSimpleResponse(false, "Invalid token"))
+                        call.respond(HttpStatusCode.Unauthorized, mapOf("valid" to false))
                     }
                 }
 
                 post("/api/play") {
+                    val clientIp = call.request.origin.remoteHost
+                    onDevicePaired(DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp))
+
                     try {
-                        val clientIp = call.request.local.remoteHost
-                        onDevicePaired(DevicePairInfo("Smartphone ($clientIp)", clientIp))
                         val payload = call.receive<TvPlayPayload>()
                         onPlayMedia(payload)
-                        call.respond(TvSimpleResponse(true, "Riproduzione avviata per: ${payload.title}"))
+                        call.respond(HttpStatusCode.OK, mapOf("success" to true, "message" to "Playback started"))
                     } catch (e: Exception) {
-                        call.respond(HttpStatusCode.BadRequest, TvSimpleResponse(false, "Payload non valido: ${e.localizedMessage}"))
+                        call.respond(HttpStatusCode.BadRequest, mapOf("success" to false, "message" to e.localizedMessage))
                     }
                 }
 
                 post("/api/upload") {
-                    try {
-                        val clientIp = call.request.local.remoteHost
-                        onDevicePaired(DevicePairInfo("Smartphone ($clientIp)", clientIp))
-                        val multipart = call.receiveMultipart()
-                        var mediaType = "VIDEO"
-                        var title = "File Ricevuto"
-                        var saveToTv = false
-                        var savedFile: File? = null
+                    val clientIp = call.request.origin.remoteHost
+                    onDevicePaired(DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp))
 
-                        val mediaDir = File(context.filesDir, "received_media").apply { mkdirs() }
+                    val multipart = call.receiveMultipart()
+                    var title = "File Ricevuto"
+                    var mediaType = "VIDEO"
+                    var saveToTv = false
+                    var savedFile: File? = null
 
-                        multipart.forEachPart { part ->
-                            when (part) {
-                                is PartData.FormItem -> {
-                                    when (part.name) {
-                                        "mediaType" -> mediaType = part.value
-                                        "title" -> title = part.value
-                                        "saveToTv" -> saveToTv = part.value.toBoolean()
-                                    }
+                    val contentLength = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: 1L
+
+                    multipart.forEachPart { part ->
+                        when (part) {
+                            is PartData.FormItem -> {
+                                when (part.name) {
+                                    "title" -> title = part.value
+                                    "mediaType" -> mediaType = part.value
+                                    "saveToTv" -> saveToTv = part.value.toBoolean()
                                 }
-                                is PartData.FileItem -> {
-                                    val fileName = part.originalFileName ?: "file_${System.currentTimeMillis()}"
-                                    val destFile = File(mediaDir, fileName)
-                                    withContext(Dispatchers.IO) {
-                                        part.streamProvider().use { input ->
-                                            destFile.outputStream().use { output ->
-                                                input.copyTo(output)
-                                            }
+                            }
+                            is PartData.FileItem -> {
+                                val fileName = title.ifBlank { part.originalFileName ?: "file_${System.currentTimeMillis()}" }
+                                val storageDir = File(context.filesDir, "media").apply { mkdirs() }
+                                val destFile = File(storageDir, fileName)
+
+                                val inputStream: InputStream = part.streamProvider()
+                                var totalBytesRead = 0L
+                                val buffer = ByteArray(16384)
+
+                                destFile.outputStream().use { output ->
+                                    inputStream.use { input ->
+                                        var bytes: Int
+                                        while (input.read(buffer).also { bytes = it } != -1) {
+                                            output.write(buffer, 0, bytes)
+                                            totalBytesRead += bytes
+                                            val percent = ((totalBytesRead * 100) / contentLength).toInt().coerceIn(0, 99)
+                                            onUploadProgress(fileName, percent)
                                         }
                                     }
-                                    savedFile = destFile
                                 }
-                                else -> {}
+                                savedFile = destFile
+                                onUploadProgress(fileName, 100)
                             }
-                            part.dispose()
+                            else -> {}
                         }
+                        part.dispose()
+                    }
 
-                        if (savedFile != null) {
-                            val payload = TvPlayPayload(
-                                command = "PLAY",
-                                mediaType = mediaType,
-                                url = savedFile!!.absolutePath,
-                                title = title.ifBlank { savedFile!!.name },
-                                saveToTv = saveToTv
-                            )
-                            onPlayMedia(payload)
-                            call.respond(TvSimpleResponse(true, "File caricato e avviato: ${savedFile!!.name}"))
-                        } else {
-                            call.respond(HttpStatusCode.BadRequest, TvSimpleResponse(false, "Nessun file ricevuto"))
-                        }
-                    } catch (e: Exception) {
-                        call.respond(HttpStatusCode.InternalServerError, TvSimpleResponse(false, "Errore upload: ${e.localizedMessage}"))
+                    onUploadFinished()
+
+                    if (savedFile != null) {
+                        val payload = TvPlayPayload(
+                            command = "PLAY",
+                            mediaType = mediaType,
+                            url = savedFile!!.absolutePath,
+                            title = title,
+                            saveToTv = saveToTv
+                        )
+                        onPlayMedia(payload)
+                        call.respond(HttpStatusCode.OK, mapOf("success" to true, "message" to "File uploaded and playing"))
+                    } else {
+                        call.respond(HttpStatusCode.BadRequest, mapOf("success" to false, "message" to "No file received"))
                     }
                 }
             }
@@ -169,7 +162,7 @@ class TvEmbeddedServer(
     }
 
     fun stop() {
-        server?.stop(1000, 2000)
+        server?.stop()
         server = null
     }
 }

@@ -61,6 +61,49 @@
             android:textSize="18sp" />
     </LinearLayout>
 
+    <!-- Upload Progress Card Overlay (Center Screen) -->
+    <LinearLayout
+        android:id="@+id/uploadProgressCard"
+        android:layout_width="380dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="#E611111A"
+        android:elevation="16dp"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/uploadTitleText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ricezione File 2TV in corso..."
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/uploadProgressBar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:layout_marginTop="16dp"
+            android:max="100"
+            android:progress="0"
+            android:progressTint="#00F5D4" />
+
+        <TextView
+            android:id="@+id/uploadPercentText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginTop="8dp"
+            android:text="0%"
+            android:textColor="#00F5D4"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
     <!-- TV QR Code Overlay Card (Top Right) -->
     <LinearLayout
         android:id="@+id/qrCard"

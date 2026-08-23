@@ -100,6 +100,20 @@ class TvMainActivity : FragmentActivity() {
                 runOnUiThread {
                     handleDevicePaired(device)
                 }
+            },
+            onUploadProgress = { title, percentage ->
+                runOnUiThread {
+                    binding.uploadProgressCard.visibility = View.VISIBLE
+                    binding.uploadProgressCard.bringToFront()
+                    binding.uploadTitleText.text = "Ricezione: $title"
+                    binding.uploadProgressBar.progress = percentage
+                    binding.uploadPercentText.text = "$percentage%"
+                }
+            },
+            onUploadFinished = {
+                runOnUiThread {
+                    binding.uploadProgressCard.visibility = View.GONE
+                }
             }
         )
         embeddedServer?.start()

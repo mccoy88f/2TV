@@ -52,6 +52,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val sendUiState = MutableStateFlow<SendUiState>(SendUiState.Idle)
     val isDarkThemeOverride = MutableStateFlow<Boolean?>(null)
+    val isTvOnline = MutableStateFlow<Boolean?>(null)
+
+    init {
+        viewModelScope.launch {
+            selectedTv.collect { tv ->
+                if (tv != null) {
+                    checkConnectionStatus(tv)
+                } else {
+                    isTvOnline.value = null
+                }
+            }
+        }
+    }
+
+    fun checkConnectionStatus(targetTv: PairedTv? = null) {
+        val tv = targetTv ?: selectedTv.value
+        if (tv != null) {
+            viewModelScope.launch {
+                val isOnline = senderClient.pingTv(tv.ip, tv.port)
+                isTvOnline.value = isOnline
+            }
+        }
+    }
+
 
     fun setSendCategoryMode(mode: SendCategoryMode) {
         sendCategoryMode.value = mode
