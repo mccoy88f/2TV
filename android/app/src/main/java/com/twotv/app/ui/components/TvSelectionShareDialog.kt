@@ -1,6 +1,5 @@
 package com.twotv.app.ui.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,20 +7,24 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.twotv.app.R
 import com.twotv.app.data.model.PairedTv
 
 @Composable
 fun TvSelectionShareDialog(
     pairedTvs: List<PairedTv>,
     onSelectTv: (PairedTv) -> Unit,
+    onCopyLink: () -> Unit,
     onDismiss: () -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
@@ -47,24 +50,24 @@ fun TvSelectionShareDialog(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "Seleziona TV di Destinazione",
+                            text = stringResource(R.string.select_target_tv),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Chiudi")
+                        Icon(Icons.Default.Close, contentDescription = null)
                     }
                 }
 
                 Text(
-                    text = "Scegli a quale schermo inviare il contenuto condiviso:",
+                    text = stringResource(R.string.select_target_tv_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 if (pairedTvs.isEmpty()) {
                     Text(
-                        text = "Nessuna TV abbinata. Apri 2TV per abbinare una TV prima di condividere.",
+                        text = stringResource(R.string.no_tv_paired),
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -100,8 +103,24 @@ fun TvSelectionShareDialog(
                     }
                 }
 
-                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                    Text("Annulla")
+                // Bottom Action Buttons: Copia Link (Left) & Annulla (Right)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = onCopyLink,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.copy_link))
+                    }
+
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.cancel))
+                    }
                 }
             }
         }

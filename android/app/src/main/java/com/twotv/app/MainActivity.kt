@@ -1,8 +1,12 @@
 package com.twotv.app
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -20,7 +24,6 @@ import com.twotv.app.data.model.PairedTv
 import com.twotv.app.ui.MainViewModel
 import com.twotv.app.ui.SendCategoryMode
 import com.twotv.app.ui.components.QRScannerDialog
-
 import com.twotv.app.ui.components.TvSelectionShareDialog
 import com.twotv.app.ui.screens.HistoryScreen
 import com.twotv.app.ui.screens.HomeScreen
@@ -36,22 +39,24 @@ enum class Screen(val title: String, val icon: ImageVector) {
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
+    private var isShareIntentProcessed = false
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        var isFromExternalShare by mutableStateOf(false)
-        handleIncomingIntent(intent) {
-            isFromExternalShare = true
+        var showTvShareDialog by mutableStateOf(false)
+        if (!isShareIntentProcessed) {
+            handleIncomingIntent(intent) {
+                showTvShareDialog = true
+                isShareIntentProcessed = true
+            }
         }
 
         setContent {
             val isDarkThemeOverride by viewModel.isDarkThemeOverride.collectAsState()
             val pairedTvs by viewModel.pairedTvs.collectAsState()
             val useDark = isDarkThemeOverride ?: isSystemInDarkTheme()
-
-            var showTvShareDialog by remember { mutableStateOf(isFromExternalShare) }
 
             TwoTVTheme(darkTheme = useDark) {
                 var currentScreen by remember { mutableStateOf(Screen.HOME) }
@@ -133,9 +138,24 @@ class MainActivity : ComponentActivity() {
                             pairedTvs = pairedTvs,
                             onSelectTv = { selectedTv ->
                                 showTvShareDialog = false
+                                intent?.action = null // Clear action so dialog doesn't re-appear
                                 viewModel.sendCurrentContent(targetTv = selectedTv)
                             },
-                            onDismiss = { showTvShareDialog = false }
+                            onCopyLink = {
+                                val textToCopy = viewModel.inputUrl.value
+                                if (textToCopy.isNotBlank()) {
+                                    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("2TV Stream Link", textToCopy)
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(this@MainActivity, getString(R.string.link_copied), Toast.LENGTH_SHORT).show()
+                                }
+                                showTvShareDialog = false
+                                intent?.action = null
+                            },
+                            onDismiss = {
+                                showTvShareDialog = false
+                                intent?.action = null
+                            }
                         )
                     }
                 }
@@ -145,11 +165,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        handleIncomingIntent(intent) {}
+        setIntent(intent)
+        isShareIntentProcessed = false
+        handleIncomingIntent(intent) {
+            // Intent handled cleanly
+        }
     }
 
     private fun handleIncomingIntent(intent: Intent?, onReceived: () -> Unit) {
-        if (intent == null) return
+        if (intent == null || intent.action == null) return
 
         when (intent.action) {
             // Stremio / External Player / Web Video Caster share target
@@ -161,7 +185,7 @@ class MainActivity : ComponentActivity() {
                     if (urlString.startsWith("http://") || urlString.startsWith("https://")) {
                         viewModel.setUrl(urlString)
                         viewModel.setSendCategoryMode(SendCategoryMode.STREAM)
-                        viewModel.setTitle(intent.getStringExtra(Intent.EXTRA_TITLE) ?: "Stream Stremio / Player")
+                        viewModel.setTitle(intent.getStringExtra(Intent.EXTRA_TITLE) ?: "")
                     } else {
                         viewModel.setFileUri(dataUri, mimeType)
                         viewModel.setSendCategoryMode(SendCategoryMode.FILE)
