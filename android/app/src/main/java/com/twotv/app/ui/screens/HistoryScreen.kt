@@ -6,15 +6,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.twotv.app.R
 import com.twotv.app.data.model.MediaType
 import com.twotv.app.data.model.SendHistory
 import com.twotv.app.ui.MainViewModel
@@ -55,11 +58,11 @@ fun HistoryScreen(
         ) {
             Column {
                 Text(
-                    text = "Cronologia Invii",
+                    text = stringResource(R.string.history_title),
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
                 )
                 Text(
-                    text = "${historyList.size} elementi inviati a TV",
+                    text = stringResource(R.string.history_count, historyList.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -67,7 +70,7 @@ fun HistoryScreen(
 
             if (historyList.isNotEmpty()) {
                 IconButton(onClick = { viewModel.clearHistory() }) {
-                    Icon(Icons.Default.DeleteSweep, contentDescription = "Pulisci Cronologia", tint = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Default.DeleteSweep, contentDescription = stringResource(R.string.clear_history), tint = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -77,7 +80,7 @@ fun HistoryScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Cerca nella cronologia...") },
+                placeholder = { Text(stringResource(R.string.search_history)) },
                 modifier = Modifier.fillMaxWidth(),
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
@@ -108,7 +111,7 @@ fun HistoryScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = if (searchQuery.isNotBlank()) "Nessun risultato trovato" else "Nessuna cronologia presente",
+                        text = stringResource(R.string.no_history),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -154,7 +157,6 @@ private fun HistoryItemCard(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Media Type Icon
             Box(
                 modifier = Modifier
                     .size(44.dp)
@@ -176,7 +178,6 @@ private fun HistoryItemCard(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Details
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -190,7 +191,7 @@ private fun HistoryItemCard(
                     if (item.saveToTv) {
                         Icon(
                             Icons.Default.Bookmark,
-                            contentDescription = "Salvato su TV",
+                            contentDescription = null,
                             modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.tertiary
                         )
@@ -227,13 +228,12 @@ private fun HistoryItemCard(
                 }
             }
 
-            // Actions
             Column {
                 IconButton(onClick = onResend) {
-                    Icon(Icons.Default.Send, contentDescription = "Reinvia", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.resend), tint = MaterialTheme.colorScheme.primary)
                 }
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.DeleteOutline, contentDescription = "Elimina", tint = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Default.DeleteOutline, contentDescription = stringResource(R.string.delete), tint = MaterialTheme.colorScheme.error)
                 }
             }
         }

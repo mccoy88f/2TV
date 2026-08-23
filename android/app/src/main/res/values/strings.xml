@@ -1,3 +1,55 @@
 <resources>
     <string name="app_name">2TV</string>
+    <string name="send_mode_title">2TV Sharing Mode</string>
+    <string name="mode_stream">Stream</string>
+    <string name="mode_file">File</string>
+    <string name="mode_link">Web Link</string>
+    
+    <string name="active_tv">Active TV</string>
+    <string name="no_tv_paired">No TV Paired</string>
+    <string name="scan_qr_to_pair">Scan QR Code on TV screen</string>
+    <string name="scan_qr">Scan QR Code</string>
+    <string name="switch_tv">Switch TV</string>
+    
+    <string name="share_content">Share Content</string>
+    <string name="url_label">URL of file or stream</string>
+    <string name="title_optional">Title (Optional)</string>
+    <string name="save_to_tv">Save to TV</string>
+    <string name="save_to_tv_desc">Save content to TV archive history</string>
+    <string name="send_2tv">Send 2TV</string>
+    <string name="upload_file_2tv">Upload 2TV File</string>
+    <string name="start_stream_2tv">Start 2TV Stream</string>
+    <string name="send_link_2tv">Send 2TV Link</string>
+    
+    <string name="select_file_btn">Select Video, Photo, or Audio</string>
+    <string name="file_ready">File ready for upload</string>
+    <string name="quick_presets">Quick Test Samples</string>
+    
+    <string name="nav_2tv">2TV</string>
+    <string name="nav_history">History</string>
+    <string name="nav_tvs">Paired TVs</string>
+    
+    <string name="history_title">Send History</string>
+    <string name="history_count">%1$d items sent to TV</string>
+    <string name="search_history">Search history...</string>
+    <string name="no_history">No history items found</string>
+    <string name="clear_history">Clear History</string>
+    <string name="resend">Resend</string>
+    <string name="delete">Delete</string>
+    
+    <string name="tvs_title">Paired TVs</string>
+    <string name="tvs_count">%1$d screens configured</string>
+    <string name="pair_new_tv">Pair New TV</string>
+    <string name="pair_new_tv_desc">Scan QR Code on TV screen to connect over local network</string>
+    <string name="manual_ip">Add Manual IP</string>
+    <string name="active_badge">Active</string>
+    
+    <string name="pair_qr_title">Pair TV via QR Code</string>
+    <string name="pair_qr_desc">Frame the QR Code displayed on your TV screen to pair it with 2TV.</string>
+    <string name="manual_input">Manual Input</string>
+    <string name="use_camera">Use Camera</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="select_target_tv">Select Target TV</string>
+    <string name="select_target_tv_desc">Choose which screen to send the shared content to:</string>
 </resources>

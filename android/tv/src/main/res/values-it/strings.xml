@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">2TV per Android TV</string>
+    <string name="tv_subtitle">Inquadra il QR Code con l\'app 2TV Android per inviare contenuti</string>
+    <string name="paired_devices_title">Dispositivi Accoppiati</string>
+    <string name="btn_new_pairing">Nuovo Accoppiamento (QR Code)</string>
+    <string name="now_playing">In Riproduzione</string>
+    <string name="archive_title">Archivio TV</string>
+    <string name="cat_all">Tutti</string>
+    <string name="cat_photo">Foto</string>
+    <string name="cat_video">Video</string>
+    <string name="cat_audio">Audio</string>
+    <string name="cat_web">Web</string>
+    <string name="cat_other">Altro</string>
+</resources>

@@ -1,6 +1,5 @@
 package com.twotv.app.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,9 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.twotv.app.R
 import com.twotv.app.data.model.PairedTv
 import com.twotv.app.ui.MainViewModel
 
@@ -40,11 +40,11 @@ fun TvsScreen(
         ) {
             Column {
                 Text(
-                    text = "TV Abbinate",
+                    text = stringResource(R.string.tvs_title),
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
                 )
                 Text(
-                    text = "${pairedTvs.size} schermi configurati",
+                    text = stringResource(R.string.tvs_count, pairedTvs.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -52,16 +52,14 @@ fun TvsScreen(
 
             Row {
                 IconButton(onClick = { showManualAddDialog = true }) {
-                    Icon(Icons.Default.Add, contentDescription = "Aggiungi IP Manuale")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.manual_ip))
                 }
-
                 IconButton(onClick = onOpenQrScanner) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Abbina QR Code", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.scan_qr), tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
 
-        // Add QR Button Hero
         Card(
             onClick = onOpenQrScanner,
             modifier = Modifier.fillMaxWidth(),
@@ -83,11 +81,11 @@ fun TvsScreen(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Abbina Nuova TV",
+                        text = stringResource(R.string.pair_new_tv),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                     Text(
-                        text = "Scansiona il QR Code sullo schermo TV per connetterti in rete locale",
+                        text = stringResource(R.string.pair_new_tv_desc),
                         style = MaterialTheme.typography.bodySmall
                     )
                 }
@@ -111,7 +109,7 @@ fun TvsScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Nessuna TV abbinata al momento",
+                        text = stringResource(R.string.no_tv_paired),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -184,7 +182,7 @@ private fun PairedTvItemCard(
                         Spacer(modifier = Modifier.width(8.dp))
                         SuggestionChip(
                             onClick = {},
-                            label = { Text("Attiva", style = MaterialTheme.typography.labelSmall) }
+                            label = { Text(stringResource(R.string.active_badge), style = MaterialTheme.typography.labelSmall) }
                         )
                     }
                 }
@@ -197,7 +195,7 @@ private fun PairedTvItemCard(
             }
 
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.DeleteOutline, contentDescription = "Rimuovi TV", tint = MaterialTheme.colorScheme.error)
+                Icon(Icons.Default.DeleteOutline, contentDescription = stringResource(R.string.delete), tint = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -215,31 +213,31 @@ private fun ManualTvAddDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Aggiungi TV Manualmente") },
+        title = { Text(stringResource(R.string.manual_ip)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nome TV (es. Soggiorno)") },
+                    label = { Text("TV Name") },
                     singleLine = true
                 )
                 OutlinedTextField(
                     value = ip,
                     onValueChange = { ip = it },
-                    label = { Text("Indirizzo IP (es. 192.168.1.150)") },
+                    label = { Text("IP Address (es. 192.168.1.150)") },
                     singleLine = true
                 )
                 OutlinedTextField(
                     value = portText,
                     onValueChange = { portText = it },
-                    label = { Text("Porta (default 8080)") },
+                    label = { Text("Port (default 8080)") },
                     singleLine = true
                 )
                 OutlinedTextField(
                     value = token,
                     onValueChange = { token = it },
-                    label = { Text("Token di Abbinamento (Opzionale)") },
+                    label = { Text("Token (Optional)") },
                     singleLine = true
                 )
             }
@@ -254,12 +252,12 @@ private fun ManualTvAddDialog(
                 },
                 enabled = ip.isNotBlank()
             ) {
-                Text("Aggiungi")
+                Text("OK")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annulla")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

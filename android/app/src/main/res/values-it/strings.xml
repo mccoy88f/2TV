@@ -1,0 +1,55 @@
+<resources>
+    <string name="app_name">2TV</string>
+    <string name="send_mode_title">Modalità di Invio 2TV</string>
+    <string name="mode_stream">Stream</string>
+    <string name="mode_file">File</string>
+    <string name="mode_link">Link Web</string>
+    
+    <string name="active_tv">TV Attiva</string>
+    <string name="no_tv_paired">Nessuna TV Abbinata</string>
+    <string name="scan_qr_to_pair">Scansiona il QR Code sulla TV</string>
+    <string name="scan_qr">Scansiona QR Code</string>
+    <string name="switch_tv">Cambia TV</string>
+    
+    <string name="share_content">Condividi Contenuto</string>
+    <string name="url_label">URL del file o stream</string>
+    <string name="title_optional">Titolo (Opzionale)</string>
+    <string name="save_to_tv">Salva su TV</string>
+    <string name="save_to_tv_desc">Salva nella memoria / cronologia TV</string>
+    <string name="send_2tv">Invia 2TV</string>
+    <string name="upload_file_2tv">Carica File 2TV</string>
+    <string name="start_stream_2tv">Avvia Stream 2TV</string>
+    <string name="send_link_2tv">Invia Link 2TV</string>
+    
+    <string name="select_file_btn">Scegli Video, Foto o Audio</string>
+    <string name="file_ready">File pronto per l\'upload</string>
+    <string name="quick_presets">Esempi di Prova Rapida</string>
+    
+    <string name="nav_2tv">2TV</string>
+    <string name="nav_history">Cronologia</string>
+    <string name="nav_tvs">TV Abbinate</string>
+    
+    <string name="history_title">Cronologia Invii</string>
+    <string name="history_count">%1$d elementi inviati a TV</string>
+    <string name="search_history">Cerca nella cronologia...</string>
+    <string name="no_history">Nessuna cronologia presente</string>
+    <string name="clear_history">Pulisci Cronologia</string>
+    <string name="resend">Reinvia</string>
+    <string name="delete">Elimina</string>
+    
+    <string name="tvs_title">TV Abbinate</string>
+    <string name="tvs_count">%1$d schermi configurati</string>
+    <string name="pair_new_tv">Abbina Nuova TV</string>
+    <string name="pair_new_tv_desc">Scansiona il QR Code sullo schermo TV per connetterti in rete locale</string>
+    <string name="manual_ip">Aggiungi IP Manuale</string>
+    <string name="active_badge">Attiva</string>
+    
+    <string name="pair_qr_title">Abbina TV via QR Code</string>
+    <string name="pair_qr_desc">Inquadra il QR Code mostrato sullo schermo della tua TV per abbinarla all\'app 2TV.</string>
+    <string name="manual_input">Inserimento Manuale</string>
+    <string name="use_camera">Usa Fotocamera</string>
+    <string name="cancel">Annulla</string>
+
+    <string name="select_target_tv">Seleziona TV di Destinazione</string>
+    <string name="select_target_tv_desc">Scegli a quale schermo inviare il contenuto condiviso:</string>
+</resources>

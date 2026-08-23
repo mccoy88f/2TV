@@ -17,8 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.twotv.app.R
 import com.twotv.app.data.model.MediaType
 import com.twotv.app.data.model.PairedTv
 import com.twotv.app.ui.MainViewModel
@@ -36,7 +38,6 @@ fun HomeScreen(
     val sendMode by viewModel.sendCategoryMode.collectAsState()
     val url by viewModel.inputUrl.collectAsState()
     val title by viewModel.inputTitle.collectAsState()
-    val mediaType by viewModel.selectedMediaType.collectAsState()
     val saveToTv by viewModel.saveToTv.collectAsState()
     val sendState by viewModel.sendUiState.collectAsState()
     val selectedFileUri by viewModel.selectedFileUri.collectAsState()
@@ -84,7 +85,7 @@ fun HomeScreen(
                         Text(state.message, style = MaterialTheme.typography.bodyMedium)
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(onClick = { viewModel.resetSendStatus() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Chiudi")
+                            Icon(Icons.Default.Close, contentDescription = null)
                         }
                     }
                 }
@@ -103,7 +104,7 @@ fun HomeScreen(
                         Text(state.errorMessage, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer)
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(onClick = { viewModel.resetSendStatus() }) {
-                            Icon(Icons.Default.Close, contentDescription = "Chiudi")
+                            Icon(Icons.Default.Close, contentDescription = null)
                         }
                     }
                 }
@@ -119,7 +120,7 @@ fun HomeScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Modalità di Invio 2TV",
+                    text = stringResource(R.string.send_mode_title),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -134,7 +135,7 @@ fun HomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.LiveTv, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Stream")
+                            Text(stringResource(R.string.mode_stream))
                         }
                     }
 
@@ -146,7 +147,7 @@ fun HomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("File")
+                            Text(stringResource(R.string.mode_file))
                         }
                     }
 
@@ -158,7 +159,7 @@ fun HomeScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Link Web")
+                            Text(stringResource(R.string.mode_link))
                         }
                     }
                 }
@@ -178,13 +179,8 @@ fun HomeScreen(
                 when (sendMode) {
                     SendCategoryMode.FILE -> {
                         Text(
-                            text = "Seleziona File dal Dispositivo",
+                            text = stringResource(R.string.select_file_btn),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                        )
-                        Text(
-                            text = "Il file verrà trasferito via Wi-Fi alla TV ed avviato al termine del caricamento.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         Button(
@@ -197,7 +193,7 @@ fun HomeScreen(
                         ) {
                             Icon(Icons.Default.UploadFile, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
                             Spacer(modifier = Modifier.width(12.dp))
-                            Text("Scegli Video, Foto o Audio", color = MaterialTheme.colorScheme.onSecondaryContainer)
+                            Text(stringResource(R.string.select_file_btn), color = MaterialTheme.colorScheme.onSecondaryContainer)
                         }
 
                         if (selectedFileUri != null) {
@@ -209,11 +205,12 @@ fun HomeScreen(
                                     modifier = Modifier.padding(16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.InsertDriveFile, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                    Icon(Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(title, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
-                                        Text("File pronto per l'upload", style = MaterialTheme.typography.bodySmall)
+                                        Text(stringResource(R.string.file_ready), style = MaterialTheme.typography.bodySmall)
                                     }
                                 }
                             }
@@ -222,14 +219,14 @@ fun HomeScreen(
 
                     SendCategoryMode.STREAM -> {
                         Text(
-                            text = "Invia Stream Video / Audio (es. Stremio, HLS)",
+                            text = stringResource(R.string.start_stream_2tv),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
 
                         OutlinedTextField(
                             value = url,
                             onValueChange = { viewModel.setUrl(it) },
-                            label = { Text("URL dello Stream (.m3u8, .mp4, Stremio)") },
+                            label = { Text(stringResource(R.string.url_label)) },
                             placeholder = { Text("https://example.com/stream.m3u8") },
                             modifier = Modifier.fillMaxWidth(),
                             trailingIcon = {
@@ -247,19 +244,14 @@ fun HomeScreen(
 
                     SendCategoryMode.LINK -> {
                         Text(
-                            text = "Invia Link Web o Download",
+                            text = stringResource(R.string.send_link_2tv),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                        )
-                        Text(
-                            text = "Se il link è una pagina web verrà aperta nel browser TV; se è un file verrà scaricato sulla TV.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
                         OutlinedTextField(
                             value = url,
                             onValueChange = { viewModel.setUrl(it) },
-                            label = { Text("URL Pagina Web o File Download") },
+                            label = { Text(stringResource(R.string.url_label)) },
                             placeholder = { Text("https://wikipedia.org") },
                             modifier = Modifier.fillMaxWidth(),
                             leadingIcon = { Icon(Icons.Default.Language, contentDescription = null) },
@@ -273,8 +265,8 @@ fun HomeScreen(
                 OutlinedTextField(
                     value = title,
                     onValueChange = { viewModel.setTitle(it) },
-                    label = { Text("Titolo (Opzionale)") },
-                    placeholder = { Text("es. Trailer Film / Nome Contenuto") },
+                    label = { Text(stringResource(R.string.title_optional)) },
+                    placeholder = { Text("es. Trailer Film") },
                     modifier = Modifier.fillMaxWidth(),
                     leadingIcon = { Icon(Icons.Default.Title, contentDescription = null) },
                     singleLine = true,
@@ -297,8 +289,8 @@ fun HomeScreen(
                             Icon(Icons.Default.Bookmark, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
-                                Text("Salva nell'Archivio TV", style = MaterialTheme.typography.titleSmall)
-                                Text("Salva il contenuto nella cronologia TV", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.save_to_tv), style = MaterialTheme.typography.titleSmall)
+                                Text(stringResource(R.string.save_to_tv_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         Switch(
@@ -324,15 +316,15 @@ fun HomeScreen(
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text("Invio in corso...")
+                        Text("...")
                     } else {
                         Icon(Icons.Default.Tv, contentDescription = null)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = when (sendMode) {
-                                SendCategoryMode.FILE -> "Carica File 2TV"
-                                SendCategoryMode.STREAM -> "Avvia Stream 2TV"
-                                SendCategoryMode.LINK -> "Invia Link 2TV"
+                                SendCategoryMode.FILE -> stringResource(R.string.upload_file_2tv)
+                                SendCategoryMode.STREAM -> stringResource(R.string.start_stream_2tv)
+                                SendCategoryMode.LINK -> stringResource(R.string.send_link_2tv)
                             },
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
@@ -351,7 +343,7 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    text = "Esempi di Prova Rapida",
+                    text = stringResource(R.string.quick_presets),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                 )
 
@@ -382,10 +374,10 @@ fun HomeScreen(
                 )
 
                 SamplePresetItem(
-                    title = "Pagina Web Wikipedia",
-                    subtitle = "Link Web da aprire nel browser TV",
+                    title = "Wikipedia Web Link",
+                    subtitle = "Web Link",
                     type = MediaType.IMAGE,
-                    url = "https://it.wikipedia.org",
+                    url = "https://wikipedia.org",
                     onSelect = { url, _, title ->
                         viewModel.setSendCategoryMode(SendCategoryMode.LINK)
                         viewModel.setUrl(url)
@@ -452,12 +444,12 @@ private fun ActiveTvCard(
                         )
                     } else {
                         Text(
-                            text = "Nessuna TV Abbinata",
+                            text = stringResource(R.string.no_tv_paired),
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.error
                         )
                         Text(
-                            text = "Scansiona il QR Code sulla TV",
+                            text = stringResource(R.string.scan_qr_to_pair),
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -466,10 +458,10 @@ private fun ActiveTvCard(
 
             Row {
                 IconButton(onClick = onOpenQrScanner) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Scansiona QR Code")
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.scan_qr))
                 }
                 IconButton(onClick = onOpenTvsScreen) {
-                    Icon(Icons.Default.SwapHoriz, contentDescription = "Cambia TV")
+                    Icon(Icons.Default.SwapHoriz, contentDescription = stringResource(R.string.switch_tv))
                 }
             }
         }
