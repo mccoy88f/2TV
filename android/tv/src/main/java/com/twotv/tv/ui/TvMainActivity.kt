@@ -45,78 +45,84 @@ class TvMainActivity : FragmentActivity() {
         binding = ActivityTvMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Initialize ExoPlayer
-        exoPlayer = ExoPlayer.Builder(this).build()
-        binding.playerView.player = exoPlayer
-
-        // Initialize WebView for TV Web Pages
-        binding.webView.apply {
-            settings.javaScriptEnabled = true
-            settings.domStorageEnabled = true
-            settings.loadWithOverviewMode = true
-            settings.useWideViewPort = true
-            settings.allowFileAccess = true
-            settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-            webViewClient = object : WebViewClient() {
-                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-                    return false
-                }
-            }
-        }
-
-        // Get IP and generate QR Code
-        val ip = getLocalIpAddress()
-        binding.ipTextView.text = "IP TV: http://$ip:8080"
-
-        val qrJson = """
-            {
-              "name": "Android TV (2TV)",
-              "ip": "$ip",
-              "port": 8080,
-              "pairingToken": "$PAIRING_TOKEN",
-              "platform": "androidtv"
-            }
-        """.trimIndent()
-
-        val qrBitmap = QrCodeGenerator.generateQrBitmap(qrJson, 360, 360)
-        if (qrBitmap != null) {
-            binding.qrImageView.setImageBitmap(qrBitmap)
-        }
-
         binding.btnShowQrCode.setOnClickListener {
             showQrCodeScreen()
         }
 
-        embeddedServer = TvEmbeddedServer(
-            context = applicationContext,
-            port = 8080,
-            pairingToken = PAIRING_TOKEN,
-            onPlayMedia = { payload ->
-                runOnUiThread {
-                    handleReceivedMedia(payload)
+        // Initialize components asynchronously in background thread to prevent startup delay/gray screen
+        lifecycleScope.launch(Dispatchers.IO) {
+            val ip = getLocalIpAddress()
+
+            val qrJson = """
+                {
+                  "name": "Android TV (2TV)",
+                  "ip": "$ip",
+                  "port": 8080,
+                  "pairingToken": "$PAIRING_TOKEN",
+                  "platform": "androidtv"
                 }
-            },
-            onDevicePaired = { device ->
-                runOnUiThread {
-                    handleDevicePaired(device)
+            """.trimIndent()
+
+            val qrBitmap = QrCodeGenerator.generateQrBitmap(qrJson, 360, 360)
+
+            withContext(Dispatchers.Main) {
+                // Initialize ExoPlayer
+                exoPlayer = ExoPlayer.Builder(this@TvMainActivity).build()
+                binding.playerView.player = exoPlayer
+
+                // Initialize WebView for TV Web Pages
+                binding.webView.apply {
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.loadWithOverviewMode = true
+                    settings.useWideViewPort = true
+                    settings.allowFileAccess = true
+                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                            return false
+                        }
+                    }
                 }
-            },
-            onUploadProgress = { title, percentage ->
-                runOnUiThread {
-                    binding.uploadProgressCard.visibility = View.VISIBLE
-                    binding.uploadProgressCard.bringToFront()
-                    binding.uploadTitleText.text = "Ricezione: $title"
-                    binding.uploadProgressBar.progress = percentage
-                    binding.uploadPercentText.text = "$percentage%"
-                }
-            },
-            onUploadFinished = {
-                runOnUiThread {
-                    binding.uploadProgressCard.visibility = View.GONE
+
+                binding.ipTextView.text = "IP TV: http://$ip:8080"
+                if (qrBitmap != null) {
+                    binding.qrImageView.setImageBitmap(qrBitmap)
                 }
             }
-        )
-        embeddedServer?.start()
+
+            // Start Ktor Embedded Server
+            embeddedServer = TvEmbeddedServer(
+                context = applicationContext,
+                port = 8080,
+                pairingToken = PAIRING_TOKEN,
+                onPlayMedia = { payload ->
+                    runOnUiThread {
+                        handleReceivedMedia(payload)
+                    }
+                },
+                onDevicePaired = { device ->
+                    runOnUiThread {
+                        handleDevicePaired(device)
+                    }
+                },
+                onUploadProgress = { title, percentage ->
+                    runOnUiThread {
+                        binding.uploadProgressCard.visibility = View.VISIBLE
+                        binding.uploadProgressCard.bringToFront()
+                        binding.uploadTitleText.text = "Ricezione: $title"
+                        binding.uploadProgressBar.progress = percentage
+                        binding.uploadPercentText.text = "$percentage%"
+                    }
+                },
+                onUploadFinished = {
+                    runOnUiThread {
+                        binding.uploadProgressCard.visibility = View.GONE
+                    }
+                }
+            )
+            embeddedServer?.start()
+        }
     }
 
     private fun handleDevicePaired(device: DevicePairInfo) {
