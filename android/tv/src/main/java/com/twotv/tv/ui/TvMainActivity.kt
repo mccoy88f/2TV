@@ -4,6 +4,9 @@ import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
+import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
@@ -46,10 +49,20 @@ class TvMainActivity : FragmentActivity() {
         exoPlayer = ExoPlayer.Builder(this).build()
         binding.playerView.player = exoPlayer
 
-        // Initialize WebView
-        binding.webView.settings.javaScriptEnabled = true
-        binding.webView.settings.domStorageEnabled = true
-        binding.webView.webViewClient = WebViewClient()
+        // Initialize WebView for TV Web Pages
+        binding.webView.apply {
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.loadWithOverviewMode = true
+            settings.useWideViewPort = true
+            settings.allowFileAccess = true
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                    return false
+                }
+            }
+        }
 
         // Get IP and generate QR Code
         val ip = getLocalIpAddress()
@@ -142,6 +155,7 @@ class TvMainActivity : FragmentActivity() {
         when (item.category) {
             MediaCategory.FOTO -> {
                 binding.imageView.visibility = View.VISIBLE
+                binding.imageView.bringToFront()
                 if (item.isLocalFile) {
                     binding.imageView.load(File(item.pathOrUrl))
                 } else {
@@ -151,6 +165,7 @@ class TvMainActivity : FragmentActivity() {
 
             MediaCategory.VIDEO, MediaCategory.AUDIO -> {
                 binding.playerView.visibility = View.VISIBLE
+                binding.playerView.bringToFront()
                 binding.playerView.requestFocus()
                 val mediaItem = MediaItem.fromUri(item.pathOrUrl)
                 exoPlayer?.setMediaItem(mediaItem)
@@ -160,8 +175,13 @@ class TvMainActivity : FragmentActivity() {
 
             MediaCategory.WEB -> {
                 binding.webView.visibility = View.VISIBLE
+                binding.webView.bringToFront()
                 binding.webView.requestFocus()
-                binding.webView.loadUrl(item.pathOrUrl)
+                var validUrl = item.pathOrUrl
+                if (!validUrl.startsWith("http://") && !validUrl.startsWith("https://")) {
+                    validUrl = "https://$validUrl"
+                }
+                binding.webView.loadUrl(validUrl)
             }
 
             MediaCategory.ALTRO -> {

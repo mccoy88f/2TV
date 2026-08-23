@@ -1,7 +1,9 @@
 package com.twotv.app.ui
 
 import android.app.Application
+import android.content.Context
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.twotv.app.TwoTvApplication
@@ -63,8 +65,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setUrl(url: String) {
         inputUrl.value = url
         selectedFileUri.value = null
-        if (inputTitle.value.isEmpty()) {
-            inputTitle.value = deriveTitleFromUrl(url)
+        val autoTitle = deriveTitleFromUrl(url)
+        if (autoTitle.isNotBlank()) {
+            inputTitle.value = autoTitle
         }
     }
 
@@ -73,7 +76,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         inputUrl.value = uri.toString()
         selectedMediaType.value = detectMediaTypeFromMime(mimeType)
         sendCategoryMode.value = SendCategoryMode.FILE
-        inputTitle.value = "File Locale (${selectedMediaType.value.name})"
+        
+        val realFileName = getFileNameFromUri(getApplication(), uri)
+        inputTitle.value = realFileName.ifBlank { "Media File" }
     }
 
     fun setTitle(title: String) {
@@ -101,8 +106,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         viewModelScope.launch {
             sendUiState.value = SendUiState.Sending
-            val title = if (inputTitle.value.isNotBlank()) inputTitle.value else "Media 2TV"
             val fileUri = selectedFileUri.value
+            val title = if (inputTitle.value.isNotBlank()) {
+                inputTitle.value
+            } else if (fileUri != null) {
+                getFileNameFromUri(getApplication(), fileUri)
+            } else {
+                deriveTitleFromUrl(inputUrl.value)
+            }
 
             if (sendCategoryMode.value == SendCategoryMode.FILE && fileUri != null) {
                 // FILE Mode: Local File Upload Transfer to TV
@@ -282,11 +293,46 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun deriveTitleFromUrl(url: String): String {
+        if (url.isBlank()) return ""
         return try {
-            val clean = url.substringAfterLast("/").substringBefore("?")
-            if (clean.length > 3) clean else url
+            val uri = Uri.parse(url)
+            val lastSegment = uri.lastPathSegment
+            val host = uri.host
+
+            if (!lastSegment.isNullOrBlank() && lastSegment.length > 2 && lastSegment.contains(".")) {
+                lastSegment
+            } else if (!host.isNullOrBlank()) {
+                host
+            } else if (!lastSegment.isNullOrBlank()) {
+                lastSegment
+            } else {
+                url
+            }
         } catch (e: Exception) {
-            url
+            url.substringAfterLast("/").substringBefore("?")
         }
+    }
+
+    private fun getFileNameFromUri(context: Context, uri: Uri): String {
+        var fileName = ""
+        try {
+            if (uri.scheme == "content") {
+                val cursor = context.contentResolver.query(uri, null, null, null, null)
+                cursor?.use {
+                    if (it.moveToFirst()) {
+                        val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (nameIndex != -1) {
+                            fileName = it.getString(nameIndex) ?: ""
+                        }
+                    }
+                }
+            }
+            if (fileName.isBlank()) {
+                fileName = uri.lastPathSegment ?: ""
+            }
+        } catch (e: Exception) {
+            fileName = "file_${System.currentTimeMillis()}"
+        }
+        return fileName
     }
 }
