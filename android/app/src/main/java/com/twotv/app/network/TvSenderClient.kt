@@ -32,12 +32,14 @@ data class DevicePairRequest(
 
 class TvSenderClient {
 
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+    }
+
     private val httpClient = HttpClient(CIO) {
         install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-            })
+            json(json)
         }
         engine {
             requestTimeout = 300000 // 5 minutes timeout for large file uploads
@@ -52,11 +54,9 @@ class TvSenderClient {
                 header("X-Pairing-Token", tv.pairingToken)
                 setBody(DevicePairRequest())
             }
-            if (httpResponse.status == HttpStatusCode.OK) {
-                Result.success(httpResponse.body())
-            } else {
-                Result.failure(Exception("Status ${httpResponse.status}"))
-            }
+            val bodyText = httpResponse.bodyAsText()
+            val response = json.decodeFromString<TvResponse>(bodyText)
+            Result.success(response)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -71,16 +71,12 @@ class TvSenderClient {
                 setBody(payload)
             }
 
-            if (httpResponse.status == HttpStatusCode.OK) {
-                val response: TvResponse = httpResponse.body()
-                if (response.success) {
-                    Result.success(response)
-                } else {
-                    Result.failure(Exception(response.message))
-                }
+            val bodyText = httpResponse.bodyAsText()
+            val response = json.decodeFromString<TvResponse>(bodyText)
+            if (response.success) {
+                Result.success(response)
             } else {
-                val errText = try { httpResponse.bodyAsText() } catch (e: Exception) { "Status ${httpResponse.status}" }
-                Result.failure(Exception("Errore TV (${httpResponse.status.value}): $errText"))
+                Result.failure(Exception(response.message))
             }
         } catch (e: Exception) {
             Result.failure(Exception("Impossibile connettersi alla TV ${tv.name} (${tv.ip}:${tv.port}): ${e.localizedMessage}"))
@@ -130,16 +126,12 @@ class TvSenderClient {
                 header("X-Pairing-Token", tv.pairingToken)
             }
 
-            if (httpResponse.status == HttpStatusCode.OK) {
-                val response: TvResponse = httpResponse.body()
-                if (response.success) {
-                    Result.success(response)
-                } else {
-                    Result.failure(Exception(response.message))
-                }
+            val bodyText = httpResponse.bodyAsText()
+            val response = json.decodeFromString<TvResponse>(bodyText)
+            if (response.success) {
+                Result.success(response)
             } else {
-                val errText = try { httpResponse.bodyAsText() } catch (e: Exception) { "Status ${httpResponse.status}" }
-                Result.failure(Exception("Errore risposta TV (${httpResponse.status.value}): $errText"))
+                Result.failure(Exception(response.message))
             }
         } catch (e: Exception) {
             Result.failure(Exception("Errore durante l'invio del file alla TV ${tv.name}: ${e.localizedMessage}"))

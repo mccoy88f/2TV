@@ -3,16 +3,15 @@ package com.twotv.tv.server
 import android.content.Context
 import io.ktor.http.*
 import io.ktor.http.content.*
-import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
-import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.origin
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.InputStream
 
@@ -42,41 +41,46 @@ class TvEmbeddedServer(
     private val onUploadFinished: () -> Unit = {}
 ) {
     private var server: EmbeddedServer<*, *>? = null
+    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     fun start() {
         server = embeddedServer(CIO, port = port) {
-            install(ContentNegotiation) {
-                json()
-            }
-
             routing {
                 get("/api/ping") {
-                    call.respond(HttpStatusCode.OK, mapOf("status" to "online", "server" to "2TV Receiver"))
+                    call.respondText(
+                        text = """{"status":"online","server":"2TV Receiver"}""",
+                        contentType = ContentType.Application.Json,
+                        status = HttpStatusCode.OK
+                    )
                 }
 
                 post("/api/pair") {
                     val clientIp = call.request.origin.remoteHost
                     try {
-                        val body = call.receive<DevicePairInfo>()
+                        val bodyText = call.receiveText()
+                        val body = json.decodeFromString<DevicePairInfo>(bodyText)
                         val pairInfo = DevicePairInfo(deviceName = body.deviceName, deviceIp = clientIp)
                         onDevicePaired(pairInfo)
-                        call.respond(HttpStatusCode.OK, mapOf("success" to true, "message" to "Device paired successfully"))
                     } catch (e: Exception) {
                         val pairInfo = DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp)
                         onDevicePaired(pairInfo)
-                        call.respond(HttpStatusCode.OK, mapOf("success" to true, "message" to "Device paired"))
                     }
+                    call.respondText(
+                        text = """{"success":true,"message":"Device paired"}""",
+                        contentType = ContentType.Application.Json,
+                        status = HttpStatusCode.OK
+                    )
                 }
 
                 post("/api/verify") {
                     val token = call.request.headers["X-Pairing-Token"]
-                    if (token == pairingToken || token != null) {
-                        val clientIp = call.request.origin.remoteHost
-                        onDevicePaired(DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp))
-                        call.respond(HttpStatusCode.OK, mapOf("valid" to true))
-                    } else {
-                        call.respond(HttpStatusCode.Unauthorized, mapOf("valid" to false))
-                    }
+                    val clientIp = call.request.origin.remoteHost
+                    onDevicePaired(DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp))
+                    call.respondText(
+                        text = """{"valid":true}""",
+                        contentType = ContentType.Application.Json,
+                        status = HttpStatusCode.OK
+                    )
                 }
 
                 post("/api/play") {
@@ -84,11 +88,20 @@ class TvEmbeddedServer(
                     onDevicePaired(DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp))
 
                     try {
-                        val payload = call.receive<TvPlayPayload>()
+                        val bodyText = call.receiveText()
+                        val payload = json.decodeFromString<TvPlayPayload>(bodyText)
                         onPlayMedia(payload)
-                        call.respond(HttpStatusCode.OK, mapOf("success" to true, "message" to "Playback started"))
+                        call.respondText(
+                            text = """{"success":true,"message":"Playback started"}""",
+                            contentType = ContentType.Application.Json,
+                            status = HttpStatusCode.OK
+                        )
                     } catch (e: Exception) {
-                        call.respond(HttpStatusCode.BadRequest, mapOf("success" to false, "message" to (e.localizedMessage ?: "Errore play")))
+                        call.respondText(
+                            text = """{"success":false,"message":"${e.localizedMessage ?: "Error playing"}"}""",
+                            contentType = ContentType.Application.Json,
+                            status = HttpStatusCode.OK
+                        )
                     }
                 }
 
@@ -126,7 +139,7 @@ class TvEmbeddedServer(
                                     val destFile = File(storageDir, fileName)
 
                                     var totalBytesRead = 0L
-                                    val buffer = ByteArray(16384)
+                                    val buffer = ByteArray(32768)
 
                                     @Suppress("DEPRECATION")
                                     val inputStream: InputStream = part.streamProvider()
@@ -161,13 +174,25 @@ class TvEmbeddedServer(
                                 saveToTv = saveToTv
                             )
                             onPlayMedia(payload)
-                            call.respond(HttpStatusCode.OK, mapOf("success" to true, "message" to "File uploaded and playing"))
+                            call.respondText(
+                                text = """{"success":true,"message":"File uploaded and playing"}""",
+                                contentType = ContentType.Application.Json,
+                                status = HttpStatusCode.OK
+                            )
                         } else {
-                            call.respond(HttpStatusCode.BadRequest, mapOf("success" to false, "message" to "No file received"))
+                            call.respondText(
+                                text = """{"success":false,"message":"No file received"}""",
+                                contentType = ContentType.Application.Json,
+                                status = HttpStatusCode.OK
+                            )
                         }
                     } catch (e: Exception) {
                         onUploadFinished()
-                        call.respond(HttpStatusCode.InternalServerError, mapOf("success" to false, "message" to (e.localizedMessage ?: "Errore server durante l'upload")))
+                        call.respondText(
+                            text = """{"success":false,"message":"${e.localizedMessage ?: "Errore server durante upload"}"}""",
+                            contentType = ContentType.Application.Json,
+                            status = HttpStatusCode.OK
+                        )
                     }
                 }
             }
