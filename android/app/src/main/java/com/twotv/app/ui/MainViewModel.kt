@@ -312,9 +312,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             mimeType.startsWith("audio/") -> MediaType.AUDIO
             mimeType.startsWith("video/") -> MediaType.VIDEO
             mimeType.contains("mpegurl") || mimeType.contains("hls") -> MediaType.STREAM
+            mimeType == "application/pdf" || mimeType.contains("document") || mimeType.contains("archive") -> MediaType.VIDEO // Handled as File
             else -> MediaType.VIDEO
         }
     }
+
 
     private fun deriveTitleFromUrl(url: String): String {
         if (url.isBlank()) return ""

@@ -265,6 +265,7 @@ class TvMainActivity : FragmentActivity() {
         when {
             // STREAM (Video or Audio stream): Play natively inside 2TV ExoPlayer
             item.category == MediaCategory.VIDEO || item.category == MediaCategory.AUDIO -> {
+                binding.bottomControlBar.visibility = View.GONE // Hide bottom bar during playback!
                 binding.idleContainer.visibility = View.GONE
                 binding.playerView.visibility = View.VISIBLE
                 binding.playerView.bringToFront()
@@ -281,7 +282,7 @@ class TvMainActivity : FragmentActivity() {
                 openWebLinkWithDefaultBrowser(item.pathOrUrl)
             }
 
-            // FILE (Photos, Documents, Local Files): Open with default external TV app via FileProvider
+            // FILE (PDF, Photos, Documents, Local Files): Open with default external TV app via FileProvider
             else -> {
                 stopPlaybackAndShowHome()
                 openFileWithDefaultApp(item.pathOrUrl)
@@ -354,7 +355,9 @@ class TvMainActivity : FragmentActivity() {
         exoPlayer?.stop()
         binding.playerView.visibility = View.GONE
         binding.idleContainer.visibility = View.VISIBLE
+        binding.bottomControlBar.visibility = View.VISIBLE // Show bottom bar when back to home!
     }
+
 
     private fun getLocalIpAddress(): String {
         try {
