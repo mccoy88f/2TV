@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2TV - Smart TV Receiver Simulator</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #09090e;
+            color: #ffffff;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+        
+        .tv-screen {
+            flex: 1;
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #video-player, #audio-player {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        #image-display {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        #web-display {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+            background: #fff;
+        }
+
+        .idle-backdrop {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            color: #64748b;
+        }
+        
+        .idle-backdrop svg {
+            width: 80px;
+            height: 80px;
+            fill: currentColor;
+        }
+
+        .sidebar {
+            width: 440px;
+            background: #11111a;
+            border-left: 1px solid #222233;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            gap: 16px;
+            overflow-y: auto;
+            z-index: 10;
+        }
+
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .brand-logo {
+            background: linear-gradient(135deg, #7f56d9, #00f5d4);
+            color: #fff;
+            font-weight: 900;
+            font-size: 20px;
+            padding: 8px 14px;
+            border-radius: 12px;
+        }
+
+        .brand-title {
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .qr-card {
+            background: #1a1a27;
+            border: 1px solid #2c2c40;
+            border-radius: 20px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 10px;
+        }
+
+        .qr-card img {
+            width: 170px;
+            height: 170px;
+            border-radius: 12px;
+            background: #fff;
+            padding: 6px;
+        }
+
+        .connection-details {
+            font-family: monospace;
+            font-size: 12px;
+            background: #0d0d14;
+            padding: 8px;
+            border-radius: 8px;
+            color: #00f5d4;
+            width: 100%;
+            word-break: break-all;
+        }
+
+        .now-playing-banner {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            background: rgba(15, 15, 23, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 14px 20px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        .now-playing-banner.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .badge-live {
+            background: #7f56d9;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 4px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        .category-tabs {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .category-tab {
+            background: #1e1e2d;
+            border: 1px solid #2d2d42;
+            color: #94a3b8;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .category-tab.active {
+            background: #7f56d9;
+            color: #fff;
+            border-color: #7f56d9;
+        }
+
+        .history-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .history-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-item {
+            background: #161623;
+            border: 1px solid #242436;
+            border-radius: 12px;
+            padding: 10px 12px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background 0.2s;
+        }
+
+        .history-item:hover {
+            background: #202033;
+        }
+
+        .delete-btn {
+            background: transparent;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="tv-screen">
+        <div id="idle-screen" class="idle-backdrop">
+            <svg viewBox="0 0 24 24">
+                <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
+            </svg>
+            <h2>In attesa di contenuti 2TV...</h2>
+            <p>Scansiona il QR Code con l'app Android o seleziona un elemento dall'Archivio locale.</p>
+        </div>
+
+        <video id="video-player" controls autoplay style="display: none;"></video>
+        <img id="image-display" alt="2TV Content">
+        <audio id="audio-player" controls style="display: none;"></audio>
+        <iframe id="web-display"></iframe>
+
+        <div id="now-playing-banner" class="now-playing-banner">
+            <span class="badge-live" id="media-badge">2TV</span>
+            <div>
+                <div style="font-weight: 700; font-size: 15px;" id="media-title">Titolo Media</div>
+                <div style="font-size: 12px; color: #94a3b8;" id="media-url">https://...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="brand-header">
+            <div class="brand-logo">2TV</div>
+            <div class="brand-title">Archivio Smart TV</div>
+        </div>
+
+        <div class="qr-card">
+            <img id="qr-image" src="" alt="QR Code 2TV">
+            <div class="connection-details" id="ip-info">Caricamento IP...</div>
+        </div>
+
+        <div class="history-section">
+            <div class="history-title">
+                <span>Archivio TV</span>
+                <span id="archive-count" style="font-size: 11px; color: #00f5d4;">0 elementi</span>
+            </div>
+
+            <!-- Category Tabs -->
+            <div class="category-tabs">
+                <button class="category-tab active" onclick="setCategoryFilter('ALL')">Tutti</button>
+                <button class="category-tab" onclick="setCategoryFilter('FOTO')">📸 Foto</button>
+                <button class="category-tab" onclick="setCategoryFilter('VIDEO')">🎬 Video</button>
+                <button class="category-tab" onclick="setCategoryFilter('AUDIO')">🎵 Audio</button>
+                <button class="category-tab" onclick="setCategoryFilter('WEB')">🌐 Web</button>
+                <button class="category-tab" onclick="setCategoryFilter('ALTRO')">📁 Altro</button>
+            </div>
+
+            <div id="history-list">
+                <div style="font-size: 12px; color: #64748b;">Nessun elemento nell'archivio TV</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const videoPlayer = document.getElementById('video-player');
+        const imageDisplay = document.getElementById('image-display');
+        const audioPlayer = document.getElementById('audio-player');
+        const webDisplay = document.getElementById('web-display');
+        const idleScreen = document.getElementById('idle-screen');
+        const nowPlayingBanner = document.getElementById('now-playing-banner');
+        const mediaTitle = document.getElementById('media-title');
+        const mediaUrl = document.getElementById('media-url');
+        const mediaBadge = document.getElementById('media-badge');
+
+        let fullHistory = [];
+        let activeCategory = 'ALL';
+        let hlsPlayer = null;
+
+        function hideAllMedia() {
+            videoPlayer.style.display = 'none';
+            imageDisplay.style.display = 'none';
+            audioPlayer.style.display = 'none';
+            webDisplay.style.display = 'none';
+            idleScreen.style.display = 'none';
+            videoPlayer.pause();
+            audioPlayer.pause();
+            if (hlsPlayer) {
+                hlsPlayer.destroy();
+                hlsPlayer = null;
+            }
+        }
+
+        function playMedia(media) {
+            hideAllMedia();
+
+            mediaTitle.textContent = media.title || media.url;
+            mediaUrl.textContent = media.url;
+            mediaBadge.textContent = media.category || media.mediaType || '2TV';
+            nowPlayingBanner.classList.add('visible');
+
+            setTimeout(() => {
+                nowPlayingBanner.classList.remove('visible');
+            }, 6000);
+
+            const cat = media.category || 'VIDEO';
+
+            if (cat === 'FOTO') {
+                imageDisplay.src = media.url;
+                imageDisplay.style.display = 'block';
+            } else if (cat === 'AUDIO') {
+                audioPlayer.src = media.url;
+                audioPlayer.style.display = 'block';
+                audioPlayer.play().catch(e => console.log(e));
+            } else if (cat === 'WEB') {
+                webDisplay.src = media.url;
+                webDisplay.style.display = 'block';
+            } else {
+                // VIDEO or STREAM
+                if (media.url.includes('.m3u8') && Hls.isSupported()) {
+                    videoPlayer.style.display = 'block';
+                    hlsPlayer = new Hls();
+                    hlsPlayer.loadSource(media.url);
+                    hlsPlayer.attachMedia(videoPlayer);
+                    hlsPlayer.on(Hls.Events.MANIFEST_PARSED, () => videoPlayer.play().catch(e => console.log(e)));
+                } else {
+                    videoPlayer.src = media.url;
+                    videoPlayer.style.display = 'block';
+                    videoPlayer.play().catch(e => console.log(e));
+                }
+            }
+        }
+
+        function setCategoryFilter(cat) {
+            activeCategory = cat;
+            document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            renderHistory();
+        }
+
+        function deleteItem(id) {
+            fullHistory = fullHistory.filter(i => i.id !== id);
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('history-list');
+            const filtered = activeCategory === 'ALL' 
+                ? fullHistory 
+                : fullHistory.filter(i => i.category === activeCategory);
+
+            document.getElementById('archive-count').textContent = `${fullHistory.length} elementi`;
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="font-size: 12px; color: #64748b;">Nessun elemento in questa categoria</div>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(item => `
+                <div class="history-item">
+                    <div onclick='playMedia(${JSON.stringify(item)})' style="flex: 1; cursor: pointer;">
+                        <div style="font-weight: 600;">${item.title}</div>
+                        <div style="font-size: 11px; color: #94a3b8;">${item.category} • ${item.url}</div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteItem(${item.id})">🗑</button>
+                </div>
+            `).join('');
+        }
+
+        const evtSource = new EventSource('/api/events');
+        evtSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            if (data.type === 'INIT') {
+                document.getElementById('qr-image').src = data.qrDataUrl;
+                document.getElementById('ip-info').textContent = `http://${data.localIp}:${data.port}`;
+                fullHistory = data.tvHistory || [];
+                renderHistory();
+                if (data.currentMedia) playMedia(data.currentMedia);
+            } else if (data.type === 'PLAY_MEDIA') {
+                fullHistory = data.tvHistory || fullHistory;
+                renderHistory();
+                playMedia(data.media);
+            }
+        };
+    </script>
+</body>
+</html>

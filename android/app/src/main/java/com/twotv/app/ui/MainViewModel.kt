@@ -1,0 +1,267 @@
+package com.twotv.app.ui
+
+import android.app.Application
+import android.net.Uri
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.twotv.app.TwoTvApplication
+import com.twotv.app.data.model.*
+import com.twotv.app.network.TvSenderClient
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import java.util.UUID
+
+sealed interface SendUiState {
+    object Idle : SendUiState
+    object Sending : SendUiState
+    data class Success(val message: String) : SendUiState
+    data class Error(val errorMessage: String) : SendUiState
+}
+
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val db = (application as TwoTvApplication).database
+    private val tvDao = db.pairedTvDao()
+    private val historyDao = db.sendHistoryDao()
+    private val senderClient = TvSenderClient()
+
+    val pairedTvs: StateFlow<List<PairedTv>> = tvDao.getAllTvs()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val selectedTv: StateFlow<PairedTv?> = tvDao.getSelectedTvFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val sendHistory: StateFlow<List<SendHistory>> = historyDao.getHistory()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    var inputUrl = MutableStateFlow("")
+    var inputTitle = MutableStateFlow("")
+    var selectedMediaType = MutableStateFlow(MediaType.VIDEO)
+    var saveToTv = MutableStateFlow(false)
+    var selectedFileUri = MutableStateFlow<Uri?>(null)
+
+    val sendUiState = MutableStateFlow<SendUiState>(SendUiState.Idle)
+    val isDarkThemeOverride = MutableStateFlow<Boolean?>(null)
+
+    fun setUrl(url: String) {
+        inputUrl.value = url
+        selectedFileUri.value = null
+        if (inputTitle.value.isEmpty()) {
+            inputTitle.value = deriveTitleFromUrl(url)
+        }
+    }
+
+    fun setFileUri(uri: Uri, mimeType: String?) {
+        selectedFileUri.value = uri
+        inputUrl.value = uri.toString()
+        selectedMediaType.value = detectMediaTypeFromMime(mimeType)
+        inputTitle.value = "File Locale (${selectedMediaType.value.name})"
+    }
+
+    fun setTitle(title: String) {
+        inputTitle.value = title
+    }
+
+    fun setMediaType(type: MediaType) {
+        selectedMediaType.value = type
+    }
+
+    fun setSaveToTv(save: Boolean) {
+        saveToTv.value = save
+    }
+
+    fun resetSendStatus() {
+        sendUiState.value = SendUiState.Idle
+    }
+
+    fun sendCurrentContent(targetTv: PairedTv? = null) {
+        val tv = targetTv ?: selectedTv.value
+        if (tv == null) {
+            sendUiState.value = SendUiState.Error("Nessuna TV selezionata. Abbina una TV prima di inviare!")
+            return
+        }
+
+        viewModelScope.launch {
+            sendUiState.value = SendUiState.Sending
+            val title = if (inputTitle.value.isNotBlank()) inputTitle.value else "Media 2TV"
+            val fileUri = selectedFileUri.value
+
+            if (fileUri != null) {
+                // Upload Local File
+                val result = senderClient.uploadFileToTv(
+                    context = getApplication(),
+                    tv = tv,
+                    fileUri = fileUri,
+                    title = title,
+                    mediaType = selectedMediaType.value,
+                    saveToTv = saveToTv.value
+                )
+
+                if (result.isSuccess) {
+                    historyDao.insertHistory(
+                        SendHistory(
+                            title = title,
+                            url = "[File Caricato] $title",
+                            mediaType = selectedMediaType.value,
+                            saveToTv = saveToTv.value,
+                            targetTvName = tv.name,
+                            isSuccess = true
+                        )
+                    )
+                    sendUiState.value = SendUiState.Success("File caricato e avviato su ${tv.name}!")
+                } else {
+                    val errorMsg = result.exceptionOrNull()?.message ?: "Errore caricamento file"
+                    sendUiState.value = SendUiState.Error(errorMsg)
+                }
+            } else {
+                // Remote URL Payload
+                val url = inputUrl.value.trim()
+                if (url.isEmpty()) {
+                    sendUiState.value = SendUiState.Error("Inserisci un URL o seleziona un file valido")
+                    return@launch
+                }
+
+                val payload = MediaPayload(
+                    command = "PLAY",
+                    mediaType = selectedMediaType.value.name,
+                    url = url,
+                    title = title,
+                    saveToTv = saveToTv.value
+                )
+
+                val result = senderClient.sendContentToTv(tv, payload)
+                if (result.isSuccess) {
+                    historyDao.insertHistory(
+                        SendHistory(
+                            title = title,
+                            url = url,
+                            mediaType = selectedMediaType.value,
+                            saveToTv = saveToTv.value,
+                            targetTvName = tv.name,
+                            isSuccess = true
+                        )
+                    )
+                    sendUiState.value = SendUiState.Success("Inviato con successo a ${tv.name}!")
+                } else {
+                    val errorMsg = result.exceptionOrNull()?.message ?: "Errore di connessione"
+                    historyDao.insertHistory(
+                        SendHistory(
+                            title = title,
+                            url = url,
+                            mediaType = selectedMediaType.value,
+                            saveToTv = saveToTv.value,
+                            targetTvName = tv.name,
+                            isSuccess = false
+                        )
+                    )
+                    sendUiState.value = SendUiState.Error(errorMsg)
+                }
+            }
+        }
+    }
+
+    fun resendItem(item: SendHistory) {
+        inputUrl.value = item.url
+        inputTitle.value = item.title
+        selectedMediaType.value = item.mediaType
+        saveToTv.value = item.saveToTv
+        selectedFileUri.value = null
+        sendCurrentContent()
+    }
+
+    fun addPairingFromQrJson(jsonString: String): Boolean {
+        return try {
+            val json = Json { ignoreUnknownKeys = true }
+            val qrData = json.decodeFromString<PairingQrPayload>(jsonString)
+            val tvId = UUID.nameUUIDFromBytes("${qrData.ip}:${qrData.port}".toByteArray()).toString()
+
+            val pairedTv = PairedTv(
+                id = tvId,
+                name = qrData.name,
+                ip = qrData.ip,
+                port = qrData.port,
+                pairingToken = qrData.pairingToken,
+                platform = qrData.platform,
+                isSelected = true
+            )
+
+            viewModelScope.launch {
+                tvDao.insertOrUpdateTv(pairedTv)
+                tvDao.selectTv(tvId)
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun addManualTv(name: String, ip: String, port: Int, token: String) {
+        val tvId = UUID.nameUUIDFromBytes("$ip:$port".toByteArray()).toString()
+        val tv = PairedTv(
+            id = tvId,
+            name = if (name.isNotBlank()) name else "TV ($ip)",
+            ip = ip,
+            port = port,
+            pairingToken = if (token.isNotBlank()) token else "demo-token",
+            platform = "manual",
+            isSelected = true
+        )
+        viewModelScope.launch {
+            tvDao.insertOrUpdateTv(tv)
+            tvDao.selectTv(tvId)
+        }
+    }
+
+    fun selectTv(tvId: String) {
+        viewModelScope.launch {
+            tvDao.selectTv(tvId)
+        }
+    }
+
+    fun deleteTv(tv: PairedTv) {
+        viewModelScope.launch {
+            tvDao.deleteTv(tv)
+        }
+    }
+
+    fun deleteHistoryItem(id: Long) {
+        viewModelScope.launch {
+            historyDao.deleteHistoryItem(id)
+        }
+    }
+
+    fun clearHistory() {
+        viewModelScope.launch {
+            historyDao.clearHistory()
+        }
+    }
+
+    fun toggleTheme() {
+        isDarkThemeOverride.value = when (isDarkThemeOverride.value) {
+            true -> false
+            false -> null
+            null -> true
+        }
+    }
+
+    private fun detectMediaTypeFromMime(mimeType: String?): MediaType {
+        if (mimeType == null) return MediaType.VIDEO
+        return when {
+            mimeType.startsWith("image/") -> MediaType.IMAGE
+            mimeType.startsWith("audio/") -> MediaType.AUDIO
+            mimeType.startsWith("video/") -> MediaType.VIDEO
+            mimeType.contains("mpegurl") || mimeType.contains("hls") -> MediaType.STREAM
+            else -> MediaType.VIDEO
+        }
+    }
+
+    private fun deriveTitleFromUrl(url: String): String {
+        return try {
+            val clean = url.substringAfterLast("/").substringBefore("?")
+            if (clean.length > 3) clean else url
+        } catch (e: Exception) {
+            url
+        }
+    }
+}

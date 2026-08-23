@@ -1,0 +1,266 @@
+package com.twotv.app.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.twotv.app.data.model.PairedTv
+import com.twotv.app.ui.MainViewModel
+
+@Composable
+fun TvsScreen(
+    viewModel: MainViewModel,
+    onOpenQrScanner: () -> Unit
+) {
+    val pairedTvs by viewModel.pairedTvs.collectAsState()
+    val selectedTv by viewModel.selectedTv.collectAsState()
+
+    var showManualAddDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "TV Abbinate",
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
+                )
+                Text(
+                    text = "${pairedTvs.size} schermi configurati",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Row {
+                IconButton(onClick = { showManualAddDialog = true }) {
+                    Icon(Icons.Default.Add, contentDescription = "Aggiungi IP Manuale")
+                }
+
+                IconButton(onClick = onOpenQrScanner) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Abbina QR Code", tint = MaterialTheme.colorScheme.primary)
+                }
+            }
+        }
+
+        // Add QR Button Hero
+        Card(
+            onClick = onOpenQrScanner,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.QrCodeScanner,
+                    contentDescription = null,
+                    modifier = Modifier.size(36.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Abbina Nuova TV",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Text(
+                        text = "Scansiona il QR Code sullo schermo TV per connetterti in rete locale",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Icon(Icons.Default.ChevronRight, contentDescription = null)
+            }
+        }
+
+        if (pairedTvs.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Default.TvOff,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Nessuna TV abbinata al momento",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(pairedTvs, key = { it.id }) { tv ->
+                    val isSelected = selectedTv?.id == tv.id
+                    PairedTvItemCard(
+                        tv = tv,
+                        isSelected = isSelected,
+                        onSelect = { viewModel.selectTv(tv.id) },
+                        onDelete = { viewModel.deleteTv(tv) }
+                    )
+                }
+            }
+        }
+    }
+
+    if (showManualAddDialog) {
+        ManualTvAddDialog(
+            onDismiss = { showManualAddDialog = false },
+            onAdd = { name, ip, port, token ->
+                viewModel.addManualTv(name, ip, port, token)
+                showManualAddDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun PairedTvItemCard(
+    tv: PairedTv,
+    isSelected: Boolean,
+    onSelect: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
+        onClick = onSelect,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            RadioButton(
+                selected = isSelected,
+                onClick = onSelect
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = tv.name,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    if (isSelected) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        SuggestionChip(
+                            onClick = {},
+                            label = { Text("Attiva", style = MaterialTheme.typography.labelSmall) }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "IP: ${tv.ip}:${tv.port} (${tv.platform})",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            IconButton(onClick = onDelete) {
+                Icon(Icons.Default.DeleteOutline, contentDescription = "Rimuovi TV", tint = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ManualTvAddDialog(
+    onDismiss: () -> Unit,
+    onAdd: (name: String, ip: String, port: Int, token: String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var ip by remember { mutableStateOf("") }
+    var portText by remember { mutableStateOf("8080") }
+    var token by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Aggiungi TV Manualmente") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nome TV (es. Soggiorno)") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = ip,
+                    onValueChange = { ip = it },
+                    label = { Text("Indirizzo IP (es. 192.168.1.150)") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = portText,
+                    onValueChange = { portText = it },
+                    label = { Text("Porta (default 8080)") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = token,
+                    onValueChange = { token = it },
+                    label = { Text("Token di Abbinamento (Opzionale)") },
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val port = portText.toIntOrNull() ?: 8080
+                    if (ip.isNotBlank()) {
+                        onAdd(name, ip.trim(), port, token.trim())
+                    }
+                },
+                enabled = ip.isNotBlank()
+            ) {
+                Text("Aggiungi")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annulla")
+            }
+        }
+    )
+}

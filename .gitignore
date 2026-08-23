@@ -1,0 +1,22 @@
+# Gradle / Android build outputs
+.gradle/
+build/
+android/build/
+android/app/build/
+android/tv/build/
+android/local.properties
+android/.gradle/
+android/app/.gradle/
+android/tv/.gradle/
+android/.idea/
+.idea/
+*.iml
+
+# Node / JS
+node_modules/
+tv-receiver-simulator/node_modules/
+npm-debug.log*
+
+# System files
+.DS_Store
+Thumbs.db
