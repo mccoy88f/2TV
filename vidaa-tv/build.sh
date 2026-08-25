@@ -18,6 +18,16 @@ cp "$CORE_DIR/js/player.js" "$SCRIPT_DIR/js/player.js"
 cp "$CORE_DIR/js/receiver.js" "$SCRIPT_DIR/js/receiver.js"
 cp "$CORE_DIR/js/key-adapter.js" "$SCRIPT_DIR/js/key-adapter.js"
 cp "$CORE_DIR/lib/qrcode.min.js" "$SCRIPT_DIR/js/qrcode.min.js"
+cp "$SCRIPT_DIR/../samsung-tv/js/server.js" "$SCRIPT_DIR/js/server.js"
+cp "$SCRIPT_DIR/../samsung-tv/js/app.js" "$SCRIPT_DIR/js/app.js"
 
-echo "✅ Hisense VIDAA files prepared!"
+# Remove old package
+rm -f "$OUTPUT_ZIP"
+
+# Zip contents into VIDAA web package
+cd "$SCRIPT_DIR"
+zip -r "$OUTPUT_ZIP" index.html css/ js/ > /dev/null
+
+echo "✅ Hisense VIDAA Package created successfully!"
+echo "📍 Location: $OUTPUT_ZIP"
 echo "=========================================="
