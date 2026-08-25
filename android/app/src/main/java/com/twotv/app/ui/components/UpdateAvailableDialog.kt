@@ -71,10 +71,11 @@ fun UpdateAvailableDialog(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Download aggiornamento: $downloadProgress%",
+                            text = "Download aggiornamento 2TV: $downloadProgress%",
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.Bold
                         )
+
                     }
                 }
 

@@ -174,7 +174,8 @@ class TvMainActivity : FragmentActivity() {
     private fun downloadAndInstallTvUpdate(downloadUrl: String) {
         binding.uploadProgressCard.visibility = View.VISIBLE
         binding.uploadProgressCard.bringToFront()
-        binding.uploadTitleText.text = "Download Aggiornamento TV..."
+        binding.uploadTitleText.text = "Download Aggiornamento 2TV..."
+
 
         lifecycleScope.launch {
             val result = com.twotv.tv.util.AppUpdater.downloadAndInstallApk(
