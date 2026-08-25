@@ -316,6 +316,24 @@ class TvMainActivity : FragmentActivity() {
             .show()
     }
 
+    private fun detectStreamOrMediaMimeType(urlStr: String): String {
+        val lower = urlStr.lowercase()
+        return when {
+            lower.contains(".m3u8") || lower.contains("hls") -> "application/x-mpegURL"
+            lower.contains(".mpd") -> "application/dash+xml"
+            lower.contains(".mp4") -> "video/mp4"
+            lower.contains(".mkv") -> "video/x-matroska"
+            lower.contains(".ts") -> "video/mp2t"
+            lower.contains(".mp3") -> "audio/mp3"
+            lower.contains(".aac") -> "audio/aac"
+            lower.contains(".flac") -> "audio/flac"
+            lower.contains(".ogg") -> "audio/ogg"
+            lower.contains(".wav") -> "audio/wav"
+            lower.startsWith("rtsp://") || lower.startsWith("rtmp://") -> "video/*"
+            else -> "video/*"
+        }
+    }
+
     private fun openMediaWithIntentChooser(pathOrUrl: String, title: String = "") {
         try {
             val file = File(pathOrUrl)
@@ -330,20 +348,25 @@ class TvMainActivity : FragmentActivity() {
                 }
             } else {
                 var validUrl = pathOrUrl
-                if (!validUrl.startsWith("http://") && !validUrl.startsWith("https://")) {
+                if (!validUrl.startsWith("http://") && !validUrl.startsWith("https://") && !validUrl.startsWith("rtsp://") && !validUrl.startsWith("rtmp://")) {
                     validUrl = "https://$validUrl"
                 }
-                Intent(Intent.ACTION_VIEW, Uri.parse(validUrl)).apply {
+                val uri = Uri.parse(validUrl)
+                val mimeType = detectStreamOrMediaMimeType(validUrl)
+
+                Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, mimeType)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
             }
-            val chooser = Intent.createChooser(intent, "Apri con...")
+            val chooser = Intent.createChooser(intent, "Apri stream/video con...")
             chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(chooser)
         } catch (e: Exception) {
             Toast.makeText(this, "Impossibile aprire con app esterne: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
     }
+
 
 
     private fun handleReceivedMedia(payload: TvPlayPayload) {
