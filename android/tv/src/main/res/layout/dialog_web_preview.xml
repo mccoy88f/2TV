@@ -41,23 +41,33 @@
         <Button
             android:id="@+id/btnOpenWithWeb"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="40dp"
             android:layout_marginEnd="12dp"
             android:background="@drawable/bg_btn_primary"
             app:backgroundTint="@null"
+            android:paddingHorizontal="18dp"
+            android:paddingVertical="6dp"
             android:focusable="true"
             android:text="Apri con..."
-            android:textColor="@color/color_btn_text" />
+            android:textColor="@color/color_btn_text"
+            android:textSize="13sp"
+            android:textAllCaps="false"
+            android:textStyle="bold" />
 
         <Button
             android:id="@+id/btnCloseWeb"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="40dp"
             android:background="@drawable/bg_btn_danger"
             app:backgroundTint="@null"
+            android:paddingHorizontal="18dp"
+            android:paddingVertical="6dp"
             android:focusable="true"
             android:text="Chiudi"
-            android:textColor="@color/color_btn_text" />
+            android:textColor="@color/color_btn_text"
+            android:textSize="13sp"
+            android:textAllCaps="false"
+            android:textStyle="bold" />
 
     </LinearLayout>
 
