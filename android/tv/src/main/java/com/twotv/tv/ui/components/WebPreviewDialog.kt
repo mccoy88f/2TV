@@ -52,13 +52,17 @@ class WebPreviewDialog(
 
         val titleTextView = view.findViewById<TextView>(R.id.webTitleText)
         webView = view.findViewById(R.id.previewWebView)
-        headerBar = view.findViewById(R.id.webHeaderBar)
         val closeBtn = view.findViewById<View>(R.id.btnCloseWeb)
+        val btnOpenWith = view.findViewById<View>(R.id.btnOpenWithWeb)
 
         titleTextView.text = title
         closeBtn.setOnClickListener { dismiss() }
+        btnOpenWith?.setOnClickListener {
+            openWithExternalBrowser(url)
+        }
 
         scheduleHeaderAutoHide()
+
 
         webView?.settings?.apply {
             javaScriptEnabled = true
@@ -136,4 +140,22 @@ class WebPreviewDialog(
         }
         return super.onKeyDown(keyCode, event)
     }
+
+    private fun openWithExternalBrowser(urlStr: String) {
+        try {
+            var validUrl = urlStr
+            if (!validUrl.startsWith("http://") && !validUrl.startsWith("https://")) {
+                validUrl = "https://$validUrl"
+            }
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(validUrl)).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            val chooser = android.content.Intent.createChooser(intent, "Apri link con...")
+            chooser.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(chooser)
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(context, "Impossibile aprire con app esterne: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
 }
+

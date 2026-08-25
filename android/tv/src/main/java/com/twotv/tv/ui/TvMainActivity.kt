@@ -67,6 +67,13 @@ class TvMainActivity : FragmentActivity() {
             showHistoryDialog()
         }
 
+        binding.btnOpenWithMedia.setOnClickListener {
+            if (currentPlayingItemUrl.isNotBlank()) {
+                openMediaWithIntentChooser(currentPlayingItemUrl)
+            }
+        }
+
+
 
         // Initialize components asynchronously in background thread
         lifecycleScope.launch(Dispatchers.IO) {
@@ -269,6 +276,8 @@ class TvMainActivity : FragmentActivity() {
             .show()
     }
 
+    private var currentPlayingItemUrl: String = ""
+
     private fun showHistoryItemOptionsDialog(index: Int) {
         val item = archiveList[index]
         val actionText = if (item.category == MediaCategory.STREAM) {
@@ -277,14 +286,15 @@ class TvMainActivity : FragmentActivity() {
             getString(R.string.btn_open)
         }
 
-        val choices = arrayOf(actionText, getString(R.string.btn_delete))
+        val choices = arrayOf(actionText, "Apri con... (App Esterne)", getString(R.string.btn_delete))
 
         AlertDialog.Builder(this)
             .setTitle(item.title)
             .setItems(choices) { _, choiceIndex ->
                 when (choiceIndex) {
                     0 -> openOrPlayMediaItem(item)
-                    1 -> {
+                    1 -> openMediaWithIntentChooser(item.pathOrUrl, item.title)
+                    2 -> {
                         if (item.isLocalFile) {
                             try {
                                 File(item.pathOrUrl).delete()
@@ -300,6 +310,36 @@ class TvMainActivity : FragmentActivity() {
             .setNegativeButton("Annulla", null)
             .show()
     }
+
+    private fun openMediaWithIntentChooser(pathOrUrl: String, title: String = "") {
+        try {
+            val file = File(pathOrUrl)
+            val intent = if (file.exists()) {
+                val uri = FileProvider.getUriForFile(this, "com.twotv.tv.fileprovider", file)
+                val ext = file.extension.lowercase()
+                val mimeType = getMimeTypeFromExtension(ext)
+                Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, mimeType)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            } else {
+                var validUrl = pathOrUrl
+                if (!validUrl.startsWith("http://") && !validUrl.startsWith("https://")) {
+                    validUrl = "https://$validUrl"
+                }
+                Intent(Intent.ACTION_VIEW, Uri.parse(validUrl)).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            }
+            val chooser = Intent.createChooser(intent, "Apri con...")
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(chooser)
+        } catch (e: Exception) {
+            Toast.makeText(this, "Impossibile aprire con app esterne: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+        }
+    }
+
 
     private fun handleReceivedMedia(payload: TvPlayPayload) {
         val category = TvArchiveItem.categorize(payload.url, payload.mediaType)
@@ -320,8 +360,10 @@ class TvMainActivity : FragmentActivity() {
 
     private fun openOrPlayMediaItem(item: TvArchiveItem) {
         stopPlaybackAndShowHome()
+        currentPlayingItemUrl = item.pathOrUrl
 
         binding.nowPlayingBanner.visibility = View.VISIBLE
+
         binding.nowPlayingTitle.text = item.title
         binding.nowPlayingUrl.text = item.pathOrUrl
         binding.mediaTypeBadge.text = item.category.name

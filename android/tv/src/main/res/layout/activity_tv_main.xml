@@ -206,6 +206,19 @@
                 android:textColor="#94A3B8"
                 android:textSize="12sp" />
         </LinearLayout>
+
+        <Button
+            android:id="@+id/btnOpenWithMedia"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:layout_marginStart="16dp"
+            android:layout_gravity="center_vertical"
+            android:backgroundTint="#0284C7"
+            android:focusable="true"
+            android:text="Apri con..."
+            android:textColor="#FFFFFF"
+            android:textSize="12sp" />
     </LinearLayout>
 
 </FrameLayout>
+

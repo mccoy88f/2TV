@@ -41,9 +41,13 @@ class ImagePreviewDialog(
         val imageView = view.findViewById<ImageView>(R.id.previewImageView)
         headerBar = view.findViewById(R.id.imageHeaderBar)
         val closeBtn = view.findViewById<View>(R.id.btnCloseImage)
+        val btnOpenWith = view.findViewById<View>(R.id.btnOpenWithImage)
 
         titleTextView.text = title
         closeBtn.setOnClickListener { dismiss() }
+        btnOpenWith?.setOnClickListener {
+            openWithExternalApp()
+        }
 
         headerBar?.postDelayed(hideHeaderRunnable, 3000)
 
@@ -69,4 +73,37 @@ class ImagePreviewDialog(
         }
         return super.onKeyDown(keyCode, event)
     }
+
+    private fun openWithExternalApp() {
+        try {
+            val file = File(pathOrUrl)
+            val intent = if (file.exists()) {
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    context,
+                    "com.twotv.tv.fileprovider",
+                    file
+                )
+                val ext = file.extension.lowercase()
+                val mimeType = when (ext) {
+                    "jpg", "jpeg", "png", "webp", "gif", "bmp" -> "image/*"
+                    else -> "*/*"
+                }
+                android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, mimeType)
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            } else {
+                android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(pathOrUrl)).apply {
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+            }
+            val chooser = android.content.Intent.createChooser(intent, "Apri immagine con...")
+            chooser.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(chooser)
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(context, "Impossibile aprire con app esterne: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
 }
+

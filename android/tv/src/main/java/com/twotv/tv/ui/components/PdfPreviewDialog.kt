@@ -55,13 +55,17 @@ class PdfPreviewDialog(
 
         val titleTextView = view.findViewById<TextView>(R.id.pdfTitleText)
         recyclerView = view.findViewById(R.id.pdfRecyclerView)
-        headerBar = view.findViewById(R.id.pdfHeaderBar)
         val closeBtn = view.findViewById<View>(R.id.btnClosePdf)
+        val btnOpenWith = view.findViewById<View>(R.id.btnOpenWithPdf)
 
         titleTextView.text = title
         closeBtn.setOnClickListener { dismiss() }
+        btnOpenWith?.setOnClickListener {
+            openWithExternalApp(pdfFile)
+        }
 
         scheduleHeaderAutoHide()
+
 
         recyclerView?.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
@@ -126,6 +130,27 @@ class PdfPreviewDialog(
         }
         return super.onKeyDown(keyCode, event)
     }
+
+    private fun openWithExternalApp(file: File) {
+        try {
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                context,
+                "com.twotv.tv.fileprovider",
+                file
+            )
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/pdf")
+                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            val chooser = android.content.Intent.createChooser(intent, "Apri PDF con...")
+            chooser.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(chooser)
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(context, "Impossibile aprire con app esterne: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
 
     private class PdfPageAdapter(private val renderer: PdfRenderer) :
         RecyclerView.Adapter<PdfPageAdapter.PageViewHolder>() {

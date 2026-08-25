@@ -25,6 +25,16 @@
             android:textStyle="bold" />
 
         <Button
+            android:id="@+id/btnOpenWithWeb"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:backgroundTint="#0284C7"
+            android:focusable="true"
+            android:text="Apri con..."
+            android:textColor="#FFFFFF" />
+
+        <Button
             android:id="@+id/btnCloseWeb"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
