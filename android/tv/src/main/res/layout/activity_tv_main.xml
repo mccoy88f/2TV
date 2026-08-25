@@ -214,8 +214,9 @@
             android:focusable="true"
             android:focusableInTouchMode="true"
             android:nextFocusLeft="@id/btnOpenWithMedia"
-            android:text="Chiudi (Back)"
+            android:text="Chiudi"
             android:textColor="#FFFFFF" />
+
 
     </LinearLayout>
 

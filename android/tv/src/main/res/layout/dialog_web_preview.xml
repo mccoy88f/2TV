@@ -53,8 +53,9 @@
             android:layout_height="wrap_content"
             android:backgroundTint="#EF4444"
             android:focusable="true"
-            android:text="Chiudi (Back)"
+            android:text="Chiudi"
             android:textColor="#FFFFFF" />
+
 
     </LinearLayout>
 
