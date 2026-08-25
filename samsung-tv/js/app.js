@@ -44,7 +44,7 @@
         },
 
         setupListeners: function () {
-            var self = this;
+            var self = self || this;
             var btnPairings = document.getElementById('btn-manage-pairings');
             var btnHistory = document.getElementById('btn-show-history');
             var btnCloseHistory = document.getElementById('btn-close-history-modal');
@@ -98,8 +98,6 @@
         },
 
         handleKeyAction: function (action, event) {
-            var self = this;
-
             // Player Mode
             if (this.player && this.player.isPlaying()) {
                 switch (action) {
@@ -209,31 +207,31 @@
 
         updateIpDisplay: function (detectedIp, detectedPort) {
             var ipElement = document.getElementById('tv-ip-display');
-            var hostIp = detectedIp || window.location.hostname || '192.168.1.100';
-            var hostPort = detectedPort || window.location.port || 8080;
-
-            var isHostedWeb = (window.location.protocol === 'http:' || window.location.protocol === 'https:') &&
-                              window.location.hostname !== 'localhost' &&
-                              window.location.hostname !== '127.0.0.1' &&
-                              !/^[0-9.]+\$/.test(window.location.hostname);
-
-            var displayUrl = isHostedWeb ? (window.location.origin + window.location.pathname) : ('http://' + hostIp + ':' + hostPort);
+            var hostIp = detectedIp || (this.server ? this.server.tvIpAddress : null) || window.location.hostname || '192.168.1.100';
+            var hostPort = parseInt(detectedPort || window.location.port || 8080, 10);
 
             if (ipElement) {
-                ipElement.textContent = isHostedWeb ? displayUrl : ('IP: ' + hostIp + ':' + hostPort);
+                ipElement.textContent = 'IP: ' + hostIp + ':' + hostPort;
             }
 
             var token = this.receiver ? this.receiver.pairingToken : '2TV-DEMO';
             var nickname = this.receiver ? this.receiver.tvNickname : '2TV Receiver';
             
-            var pairUrl = displayUrl + (displayUrl.indexOf('?') === -1 ? '?' : '&') + 'token=' + token + '&name=' + encodeURIComponent(nickname);
+            // Standardized JSON Payload for 2TV Android Mobile Scanner
+            var qrPayload = JSON.stringify({
+                name: nickname,
+                ip: hostIp,
+                port: hostPort,
+                pairingToken: token,
+                platform: 'web'
+            });
 
             var qrContainer = document.getElementById('qrcode');
             if (qrContainer) {
                 qrContainer.innerHTML = '';
                 if (typeof QRCode !== 'undefined') {
                     new QRCode('qrcode', {
-                        text: pairUrl,
+                        text: qrPayload,
                         width: 144,
                         height: 144
                     });
