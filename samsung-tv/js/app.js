@@ -235,8 +235,7 @@
                     new QRCode('qrcode', {
                         text: pairUrl,
                         width: 144,
-                        height: 144,
-                        correctLevel: QRCode.CorrectLevel.M
+                        height: 144
                     });
                 }
             }
