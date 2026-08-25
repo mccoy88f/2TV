@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.Window
@@ -20,6 +21,11 @@ class ImagePreviewDialog(
     private val pathOrUrl: String
 ) : Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen) {
 
+    private var headerBar: View? = null
+    private val hideHeaderRunnable = Runnable {
+        headerBar?.visibility = View.GONE
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -33,10 +39,13 @@ class ImagePreviewDialog(
 
         val titleTextView = view.findViewById<TextView>(R.id.imageTitleText)
         val imageView = view.findViewById<ImageView>(R.id.previewImageView)
+        headerBar = view.findViewById(R.id.imageHeaderBar)
         val closeBtn = view.findViewById<View>(R.id.btnCloseImage)
 
         titleTextView.text = title
         closeBtn.setOnClickListener { dismiss() }
+
+        headerBar?.postDelayed(hideHeaderRunnable, 3000)
 
         try {
             val file = File(pathOrUrl)
@@ -49,5 +58,15 @@ class ImagePreviewDialog(
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+            headerBar?.visibility = View.VISIBLE
+            headerBar?.removeCallbacks(hideHeaderRunnable)
+            headerBar?.postDelayed(hideHeaderRunnable, 3000)
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
     }
 }

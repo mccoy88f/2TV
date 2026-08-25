@@ -26,6 +26,21 @@ class PdfPreviewDialog(
 ) : Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen) {
 
     private var recyclerView: RecyclerView? = null
+    private var headerBar: View? = null
+
+    private val hideHeaderRunnable = Runnable {
+        headerBar?.visibility = View.GONE
+    }
+
+    private fun scheduleHeaderAutoHide() {
+        headerBar?.removeCallbacks(hideHeaderRunnable)
+        headerBar?.postDelayed(hideHeaderRunnable, 3000)
+    }
+
+    private fun showHeaderAndAutoHide() {
+        headerBar?.visibility = View.VISIBLE
+        scheduleHeaderAutoHide()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,10 +55,25 @@ class PdfPreviewDialog(
 
         val titleTextView = view.findViewById<TextView>(R.id.pdfTitleText)
         recyclerView = view.findViewById(R.id.pdfRecyclerView)
+        headerBar = view.findViewById(R.id.pdfHeaderBar)
         val closeBtn = view.findViewById<View>(R.id.btnClosePdf)
 
         titleTextView.text = title
         closeBtn.setOnClickListener { dismiss() }
+
+        scheduleHeaderAutoHide()
+
+        recyclerView?.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(rv, dx, dy)
+                if (!rv.canScrollVertically(-1)) {
+                    showHeaderAndAutoHide()
+                } else if (dy > 0) {
+                    headerBar?.removeCallbacks(hideHeaderRunnable)
+                    headerBar?.visibility = View.GONE
+                }
+            }
+        })
 
         try {
             val fileDescriptor = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
@@ -62,6 +92,8 @@ class PdfPreviewDialog(
             KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_CHANNEL_DOWN,
             KeyEvent.KEYCODE_PAGE_DOWN -> {
+                headerBar?.removeCallbacks(hideHeaderRunnable)
+                headerBar?.visibility = View.GONE
                 recyclerView?.smoothScrollBy(0, 450)
                 return true
             }
@@ -69,14 +101,22 @@ class PdfPreviewDialog(
             KeyEvent.KEYCODE_CHANNEL_UP,
             KeyEvent.KEYCODE_PAGE_UP -> {
                 recyclerView?.smoothScrollBy(0, -450)
+                if (recyclerView?.canScrollVertically(-1) == false) {
+                    showHeaderAndAutoHide()
+                }
                 return true
             }
             KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                headerBar?.removeCallbacks(hideHeaderRunnable)
+                headerBar?.visibility = View.GONE
                 recyclerView?.smoothScrollBy(0, 900)
                 return true
             }
             KeyEvent.KEYCODE_DPAD_LEFT -> {
                 recyclerView?.smoothScrollBy(0, -900)
+                if (recyclerView?.canScrollVertically(-1) == false) {
+                    showHeaderAndAutoHide()
+                }
                 return true
             }
             KeyEvent.KEYCODE_BACK -> {
