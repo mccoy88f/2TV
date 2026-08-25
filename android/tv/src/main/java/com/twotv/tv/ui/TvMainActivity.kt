@@ -2,7 +2,9 @@ package com.twotv.tv.ui
 
 import android.annotation.SuppressLint
 import android.app.AlertDialog
+import android.app.Dialog
 import android.content.Intent
+
 import android.net.Uri
 import android.os.Bundle
 import android.view.KeyEvent
@@ -314,7 +316,11 @@ class TvMainActivity : FragmentActivity() {
         openOrPlayMediaItem(archiveItem)
     }
 
+    private var activePreviewDialog: Dialog? = null
+
     private fun openOrPlayMediaItem(item: TvArchiveItem) {
+        stopPlaybackAndShowHome()
+
         binding.nowPlayingBanner.visibility = View.VISIBLE
         binding.nowPlayingTitle.text = item.title
         binding.nowPlayingUrl.text = item.pathOrUrl
@@ -337,9 +343,10 @@ class TvMainActivity : FragmentActivity() {
 
             // WEB LINK: Opened in WebPreviewDialog directly inside 2TV (fallback to external browser)
             MediaCategory.WEB -> {
-                stopPlaybackAndShowHome()
                 try {
-                    WebPreviewDialog(this, item.title, item.pathOrUrl).show()
+                    val dialog = WebPreviewDialog(this, item.title, item.pathOrUrl)
+                    activePreviewDialog = dialog
+                    dialog.show()
                 } catch (e: Exception) {
                     openWebLinkWithDefaultBrowser(item.pathOrUrl)
                 }
@@ -347,19 +354,22 @@ class TvMainActivity : FragmentActivity() {
 
             // FILE: Opened using built-in Previewer (PDF, Image, Video/Audio ExoPlayer) directly inside 2TV
             MediaCategory.FILE -> {
-                stopPlaybackAndShowHome()
                 val ext = item.pathOrUrl.substringAfterLast(".", "").lowercase()
                 when (ext) {
                     "pdf" -> {
                         val file = File(item.pathOrUrl)
                         if (file.exists()) {
-                            PdfPreviewDialog(this, item.title, file).show()
+                            val dialog = PdfPreviewDialog(this, item.title, file)
+                            activePreviewDialog = dialog
+                            dialog.show()
                         } else {
                             openFileWithDefaultApp(item.pathOrUrl)
                         }
                     }
                     "jpg", "jpeg", "png", "webp", "gif", "bmp" -> {
-                        ImagePreviewDialog(this, item.title, item.pathOrUrl).show()
+                        val dialog = ImagePreviewDialog(this, item.title, item.pathOrUrl)
+                        activePreviewDialog = dialog
+                        dialog.show()
                     }
                     "mp4", "mkv", "avi", "mov", "webm", "mp3", "wav", "flac", "aac", "ogg" -> {
                         binding.bottomControlBar.visibility = View.GONE
@@ -388,6 +398,7 @@ class TvMainActivity : FragmentActivity() {
             binding.nowPlayingBanner.visibility = View.GONE
         }, 4000)
     }
+
 
     private fun openWebLinkWithDefaultBrowser(urlStr: String) {
         try {
@@ -447,11 +458,20 @@ class TvMainActivity : FragmentActivity() {
     }
 
     private fun stopPlaybackAndShowHome() {
+        activePreviewDialog?.let {
+            if (it.isShowing) {
+                try { it.dismiss() } catch (e: Exception) { e.printStackTrace() }
+            }
+        }
+        activePreviewDialog = null
+
         exoPlayer?.stop()
+        exoPlayer?.clearMediaItems()
         binding.playerView.visibility = View.GONE
         binding.idleContainer.visibility = View.VISIBLE
         binding.bottomControlBar.visibility = View.VISIBLE
     }
+
 
     private fun getLocalIpAddress(): String {
         try {
