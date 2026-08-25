@@ -44,7 +44,7 @@
         },
 
         setupListeners: function () {
-            var self = self || this;
+            var self = this;
             var btnPairings = document.getElementById('btn-manage-pairings');
             var btnHistory = document.getElementById('btn-show-history');
             var btnCloseHistory = document.getElementById('btn-close-history-modal');
@@ -207,7 +207,11 @@
 
         updateIpDisplay: function (detectedIp, detectedPort) {
             var ipElement = document.getElementById('tv-ip-display');
-            var hostIp = detectedIp || (this.server ? this.server.tvIpAddress : null) || window.location.hostname || '192.168.1.100';
+            var rawIp = detectedIp || (this.server ? this.server.tvIpAddress : null) || window.location.hostname || '192.168.1.100';
+            
+            // Ensure IP is a valid numeric IPv4 address for local Wi-Fi pairing
+            var isNumericIp = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/.test(rawIp);
+            var hostIp = isNumericIp ? rawIp : '192.168.1.100';
             var hostPort = parseInt(detectedPort || window.location.port || 8080, 10);
 
             if (ipElement) {
@@ -217,7 +221,7 @@
             var token = this.receiver ? this.receiver.pairingToken : '2TV-DEMO';
             var nickname = this.receiver ? this.receiver.tvNickname : '2TV Receiver';
             
-            // Standardized JSON Payload for 2TV Android Mobile Scanner
+            // Local Wi-Fi JSON Payload for 2TV Android Mobile Scanner
             var qrPayload = JSON.stringify({
                 name: nickname,
                 ip: hostIp,
