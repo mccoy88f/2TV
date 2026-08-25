@@ -117,11 +117,12 @@ class TvMainActivity : FragmentActivity() {
                         handleReceivedMedia(payload)
                     }
                 },
-                onDevicePaired = { device ->
+                onDevicePaired = { device, isSilent ->
                     runOnUiThread {
-                        handleDevicePaired(device)
+                        handleDevicePaired(device, isSilent)
                     }
                 },
+
                 onUploadProgress = { title, percentage ->
                     runOnUiThread {
                         binding.uploadProgressCard.visibility = View.VISIBLE
@@ -141,14 +142,17 @@ class TvMainActivity : FragmentActivity() {
         }
     }
 
-    private fun handleDevicePaired(device: DevicePairInfo) {
+    private fun handleDevicePaired(device: DevicePairInfo, isSilent: Boolean = false) {
         PairingManager.saveDevice(this, device)
         pairedDevices.clear()
         pairedDevices.addAll(PairingManager.getPairedDevices(this))
 
         binding.qrCard.visibility = View.GONE
-        Toast.makeText(this, "Dispositivo connesso: ${device.deviceName} (${device.deviceIp})", Toast.LENGTH_SHORT).show()
+        if (!isSilent) {
+            Toast.makeText(this, "Dispositivo connesso: ${device.deviceName} (${device.deviceIp})", Toast.LENGTH_SHORT).show()
+        }
     }
+
 
     private fun toggleQrCodeVisibility() {
         if (binding.qrCard.visibility == View.VISIBLE) {

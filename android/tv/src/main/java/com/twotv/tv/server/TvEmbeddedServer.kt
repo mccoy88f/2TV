@@ -37,7 +37,7 @@ class TvEmbeddedServer(
     private val port: Int = 8080,
     private val pairingToken: String,
     private val onPlayMedia: (TvPlayPayload) -> Unit,
-    private val onDevicePaired: (DevicePairInfo) -> Unit,
+    private val onDevicePaired: (device: DevicePairInfo, isSilent: Boolean) -> Unit,
     private val onUploadProgress: (title: String, percentage: Int) -> Unit = { _, _ -> },
     private val onUploadFinished: () -> Unit = {}
 ) {
@@ -54,7 +54,7 @@ class TvEmbeddedServer(
                 get("/api/ping") {
                     val clientIp = call.request.origin.remoteHost
                     val deviceName = call.request.headers["X-Device-Name"] ?: "Smartphone"
-                    onDevicePaired(DevicePairInfo(deviceName = deviceName, deviceIp = clientIp))
+                    onDevicePaired(DevicePairInfo(deviceName = deviceName, deviceIp = clientIp), true)
                     call.respondText(
                         text = """{"success":true,"message":"online"}""",
                         contentType = ContentType.Application.Json,
@@ -62,17 +62,16 @@ class TvEmbeddedServer(
                     )
                 }
 
-
                 post("/api/pair") {
                     val clientIp = call.request.origin.remoteHost
                     try {
                         val bodyText = call.receiveText()
                         val body = json.decodeFromString<DevicePairInfo>(bodyText)
                         val pairInfo = DevicePairInfo(deviceName = body.deviceName, deviceIp = clientIp)
-                        onDevicePaired(pairInfo)
+                        onDevicePaired(pairInfo, false)
                     } catch (e: Exception) {
                         val pairInfo = DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp)
-                        onDevicePaired(pairInfo)
+                        onDevicePaired(pairInfo, false)
                     }
                     call.respondText(
                         text = """{"success":true,"message":"Device paired"}""",
@@ -83,7 +82,7 @@ class TvEmbeddedServer(
 
                 post("/api/verify") {
                     val clientIp = call.request.origin.remoteHost
-                    onDevicePaired(DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp))
+                    onDevicePaired(DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp), false)
                     call.respondText(
                         text = """{"success":true,"message":"Token valid"}""",
                         contentType = ContentType.Application.Json,
@@ -93,7 +92,7 @@ class TvEmbeddedServer(
 
                 post("/api/play") {
                     val clientIp = call.request.origin.remoteHost
-                    onDevicePaired(DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp))
+                    onDevicePaired(DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp), true)
 
                     try {
                         val bodyText = call.receiveText()
@@ -106,23 +105,28 @@ class TvEmbeddedServer(
                         )
                     } catch (e: Exception) {
                         call.respondText(
-                            text = """{"success":false,"message":"Errore decodifica: ${e.localizedMessage}"}""",
+                            text = """{"success":false,"message":"Error: ${e.localizedMessage}"}""",
                             contentType = ContentType.Application.Json,
-                            status = HttpStatusCode.OK
+                            status = HttpStatusCode.InternalServerError
                         )
                     }
                 }
 
                 post("/api/upload") {
-                    val clientIp = call.request.origin.remoteHost
-                    onDevicePaired(DevicePairInfo(deviceName = "Mobile Device", deviceIp = clientIp))
+                    val tokenHeader = call.request.headers["X-Pairing-Token"]
+                    if (tokenHeader != pairingToken) {
+                        call.respondText(
+                            text = """{"success":false,"message":"Unauthorized"}""",
+                            status = HttpStatusCode.Unauthorized
+                        )
+                        return@post
+                    }
 
                     try {
                         val multipart = call.receiveMultipart()
                         var title = "File Ricevuto"
                         var mediaType = "FILE"
                         var saveToTv = false
-
                         var savedFile: File? = null
 
                         val contentLength = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: 1L
@@ -189,17 +193,17 @@ class TvEmbeddedServer(
                             )
                         } else {
                             call.respondText(
-                                text = """{"success":false,"message":"No file received"}""",
+                                text = """{"success":false,"message":"No file uploaded"}""",
                                 contentType = ContentType.Application.Json,
-                                status = HttpStatusCode.OK
+                                status = HttpStatusCode.BadRequest
                             )
                         }
                     } catch (e: Exception) {
                         onUploadFinished()
                         call.respondText(
-                            text = """{"success":false,"message":"${e.localizedMessage ?: "Errore server durante upload"}"}""",
+                            text = """{"success":false,"message":"Upload failed: ${e.localizedMessage}"}""",
                             contentType = ContentType.Application.Json,
-                            status = HttpStatusCode.OK
+                            status = HttpStatusCode.InternalServerError
                         )
                     }
                 }
@@ -208,7 +212,7 @@ class TvEmbeddedServer(
     }
 
     fun stop() {
-        server?.stop()
+        server?.stop(1000, 2000)
         server = null
     }
 }
