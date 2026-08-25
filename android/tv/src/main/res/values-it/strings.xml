@@ -1,11 +1,13 @@
 <resources>
-    <string name="app_name">2TV per Android TV</string>
-    <string name="tv_subtitle">Inquadra il QR Code con l\'app 2TV Android per inviare contenuti</string>
+    <string name="app_name">2TV</string>
+    <string name="tv_header_title">2TV per Android TV</string>
+    <string name="tv_subtitle">Inquadra il QR Code con l\'app 2TV Mobile per inviare contenuti</string>
     <string name="paired_devices_title">Dispositivi Accoppiati</string>
     <string name="btn_new_pairing">Nuovo Accoppiamento (QR Code)</string>
     <string name="btn_manage_pairings">Gestisci Accoppiamenti</string>
     <string name="btn_history">Cronologia Ricevuti</string>
     <string name="btn_qr_code">Mostra QR Code</string>
+    <string name="btn_open_with">Apri con...</string>
     <string name="btn_open">Apri</string>
     <string name="btn_play">Riproduci</string>
     <string name="btn_delete">Elimina</string>
