@@ -55,6 +55,7 @@ class PdfPreviewDialog(
 
         val titleTextView = view.findViewById<TextView>(R.id.pdfTitleText)
         recyclerView = view.findViewById(R.id.pdfRecyclerView)
+        headerBar = view.findViewById(R.id.pdfHeaderBar)
         val closeBtn = view.findViewById<View>(R.id.btnClosePdf)
         val btnOpenWith = view.findViewById<View>(R.id.btnOpenWithPdf)
 
@@ -64,8 +65,10 @@ class PdfPreviewDialog(
             openWithExternalApp(pdfFile)
         }
 
-        scheduleHeaderAutoHide()
+        applyFocusScale(closeBtn)
+        btnOpenWith?.let { applyFocusScale(it) }
 
+        scheduleHeaderAutoHide()
 
         recyclerView?.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
@@ -88,6 +91,16 @@ class PdfPreviewDialog(
             recyclerView?.requestFocus()
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    private fun applyFocusScale(view: View) {
+        view.setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) {
+                v.animate().scaleX(1.10f).scaleY(1.10f).translationZ(12f).setDuration(150).start()
+            } else {
+                v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(150).start()
+            }
         }
     }
 
@@ -150,7 +163,6 @@ class PdfPreviewDialog(
             android.widget.Toast.makeText(context, "Impossibile aprire con app esterne: ${e.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
         }
     }
-
 
     private class PdfPageAdapter(private val renderer: PdfRenderer) :
         RecyclerView.Adapter<PdfPageAdapter.PageViewHolder>() {

@@ -77,6 +77,9 @@ class TvMainActivity : FragmentActivity() {
             stopPlaybackAndShowHome()
         }
 
+        setupFocusScaleEffects()
+
+
 
 
 
@@ -624,6 +627,24 @@ class TvMainActivity : FragmentActivity() {
         return "127.0.0.1"
     }
 
+    private fun setupFocusScaleEffects() {
+        val buttons = listOf(
+            binding.btnManagePairings,
+            binding.btnShowHistory,
+            binding.btnOpenWithMedia,
+            binding.btnCloseVideo
+        )
+        for (btn in buttons) {
+            btn.setOnFocusChangeListener { v, hasFocus ->
+                if (hasFocus) {
+                    v.animate().scaleX(1.10f).scaleY(1.10f).translationZ(12f).setDuration(150).start()
+                } else {
+                    v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(150).start()
+                }
+            }
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         embeddedServer?.stop()
@@ -631,3 +652,4 @@ class TvMainActivity : FragmentActivity() {
         exoPlayer = null
     }
 }
+

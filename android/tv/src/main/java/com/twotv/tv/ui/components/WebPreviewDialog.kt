@@ -61,8 +61,10 @@ class WebPreviewDialog(
             openWithExternalBrowser(url)
         }
 
-        scheduleHeaderAutoHide()
+        applyFocusScale(closeBtn)
+        btnOpenWith?.let { applyFocusScale(it) }
 
+        scheduleHeaderAutoHide()
 
         webView?.settings?.apply {
             javaScriptEnabled = true
@@ -95,6 +97,16 @@ class WebPreviewDialog(
             validUrl = "https://$validUrl"
         }
         webView?.loadUrl(validUrl)
+    }
+
+    private fun applyFocusScale(view: View) {
+        view.setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) {
+                v.animate().scaleX(1.10f).scaleY(1.10f).translationZ(12f).setDuration(150).start()
+            } else {
+                v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(150).start()
+            }
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -158,4 +170,3 @@ class WebPreviewDialog(
         }
     }
 }
-

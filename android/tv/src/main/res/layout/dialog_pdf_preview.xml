@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#09090E">
@@ -42,20 +43,21 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="12dp"
-            android:backgroundTint="#0284C7"
+            android:background="@drawable/bg_btn_primary"
+            app:backgroundTint="@null"
             android:focusable="true"
             android:text="Apri con..."
-            android:textColor="#FFFFFF" />
+            android:textColor="@color/color_btn_text" />
 
         <Button
             android:id="@+id/btnClosePdf"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:backgroundTint="#EF4444"
+            android:background="@drawable/bg_btn_danger"
+            app:backgroundTint="@null"
             android:focusable="true"
             android:text="Chiudi"
-            android:textColor="#FFFFFF" />
-
+            android:textColor="@color/color_btn_text" />
 
     </LinearLayout>
 

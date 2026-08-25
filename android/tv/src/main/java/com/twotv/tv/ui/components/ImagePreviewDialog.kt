@@ -49,6 +49,9 @@ class ImagePreviewDialog(
             openWithExternalApp()
         }
 
+        applyFocusScale(closeBtn)
+        btnOpenWith?.let { applyFocusScale(it) }
+
         headerBar?.postDelayed(hideHeaderRunnable, 3000)
 
         try {
@@ -63,6 +66,17 @@ class ImagePreviewDialog(
             e.printStackTrace()
         }
     }
+
+    private fun applyFocusScale(view: View) {
+        view.setOnFocusChangeListener { v, hasFocus ->
+            if (hasFocus) {
+                v.animate().scaleX(1.10f).scaleY(1.10f).translationZ(12f).setDuration(150).start()
+            } else {
+                v.animate().scaleX(1.0f).scaleY(1.0f).translationZ(0f).setDuration(150).start()
+            }
+        }
+    }
+
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
