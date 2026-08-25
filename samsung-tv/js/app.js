@@ -16,7 +16,7 @@
     AppController.prototype = {
         init: function () {
             var self = this;
-            console.log('Initializing 2TV Samsung Smart TV App...');
+            console.log('Initializing 2TV Receiver App...');
 
             this.receiver = new TvReceiver();
             this.receiver.init();
@@ -39,7 +39,7 @@
             }
 
             this.setupControlBarListeners();
-            this.updateIpDisplay('192.168.1.100', 8080);
+            this.updateIpDisplay();
             this.renderHistory();
             this.updateFocus();
         },
@@ -152,22 +152,41 @@
             }
         },
 
-        updateIpDisplay: function (ip, port) {
+        updateIpDisplay: function (detectedIp, detectedPort) {
             var ipElement = document.getElementById('tv-ip-display');
+            var hostIp = detectedIp || window.location.hostname || '192.168.1.100';
+            var hostPort = detectedPort || window.location.port || 8080;
+
+            var isHostedWeb = (window.location.protocol === 'http:' || window.location.protocol === 'https:') &&
+                              window.location.hostname !== 'localhost' &&
+                              window.location.hostname !== '127.0.0.1' &&
+                              !/^[0-9.]+\$/.test(window.location.hostname);
+
+            var displayUrl = isHostedWeb ? (window.location.origin + window.location.pathname) : ('http://' + hostIp + ':' + hostPort);
+
             if (ipElement) {
-                ipElement.textContent = 'http://' + ip + ':' + port;
+                ipElement.textContent = displayUrl;
             }
 
-            var pairUrl = 'http://' + ip + ':' + port + '?token=' + this.receiver.pairingToken;
-            var qrContainer = document.getElementById('qrcode');
-            if (qrContainer) qrContainer.innerHTML = '';
+            var qrPayload = JSON.stringify({
+                name: this.receiver ? this.receiver.tvNickname : '2TV Receiver',
+                ip: hostIp,
+                port: parseInt(hostPort, 10) || 8080,
+                pairingToken: this.receiver ? this.receiver.pairingToken : '2TV-DEMO',
+                platform: isHostedWeb ? 'web' : 'tv',
+                url: displayUrl
+            });
 
-            if (typeof QRCode !== 'undefined') {
-                new QRCode('qrcode', {
-                    text: pairUrl,
-                    width: 216,
-                    height: 216
-                });
+            var qrContainer = document.getElementById('qrcode');
+            if (qrContainer) {
+                qrContainer.innerHTML = '';
+                if (typeof QRCode !== 'undefined') {
+                    new QRCode('qrcode', {
+                        text: qrPayload,
+                        width: 216,
+                        height: 216
+                    });
+                }
             }
         },
 

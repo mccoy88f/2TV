@@ -243,29 +243,48 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         sendCurrentContent()
     }
 
-    fun addPairingFromQrJson(jsonString: String): Boolean {
+    fun addPairingFromQrJson(scannedString: String): Boolean {
         return try {
-            val json = Json { ignoreUnknownKeys = true }
-            val qrData = json.decodeFromString<PairingQrPayload>(jsonString)
-            val tvId = UUID.nameUUIDFromBytes("${qrData.ip}:${qrData.port}".toByteArray()).toString()
-
-            val pairedTv = PairedTv(
-                id = tvId,
-                name = qrData.name,
-                ip = qrData.ip,
-                port = qrData.port,
-                pairingToken = qrData.pairingToken,
-                platform = qrData.platform,
-                isSelected = true
-            )
+            val trimmed = scannedString.trim()
+            val pairedTv: PairedTv = if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+                val json = Json { ignoreUnknownKeys = true }
+                val qrData = json.decodeFromString<PairingQrPayload>(trimmed)
+                val tvId = UUID.nameUUIDFromBytes("${qrData.ip}:${qrData.port}".toByteArray()).toString()
+                PairedTv(
+                    id = tvId,
+                    name = qrData.name,
+                    ip = qrData.ip,
+                    port = qrData.port,
+                    pairingToken = qrData.pairingToken,
+                    platform = qrData.platform,
+                    isSelected = true
+                )
+            } else {
+                // Parse as URL (e.g. http://192.168.1.50:8080?token=2TV-1234 or https://mccoy88f.github.io/2TV/vidaa-tv/index.html?token=2TV-1234)
+                val uri = android.net.Uri.parse(trimmed)
+                val host = uri.host ?: "127.0.0.1"
+                val port = if (uri.port != -1) uri.port else (if (uri.scheme == "https") 443 else 80)
+                val token = uri.getQueryParameter("token") ?: "demo-token"
+                val tvId = UUID.nameUUIDFromBytes("$host:$port".toByteArray()).toString()
+                PairedTv(
+                    id = tvId,
+                    name = "TV ($host)",
+                    ip = host,
+                    port = port,
+                    pairingToken = token,
+                    platform = "web",
+                    isSelected = true
+                )
+            }
 
             viewModelScope.launch {
                 tvDao.insertOrUpdateTv(pairedTv)
-                tvDao.selectTv(tvId)
+                tvDao.selectTv(pairedTv.id)
                 senderClient.sendPairingRequest(pairedTv)
             }
             true
         } catch (e: Exception) {
+            e.printStackTrace()
             false
         }
     }
