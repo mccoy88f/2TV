@@ -362,16 +362,30 @@ class TvMainActivity : FragmentActivity() {
     }
 
     private var activePreviewDialog: Dialog? = null
-    private val hideVideoHeaderRunnable = Runnable {
-        binding.nowPlayingBanner.visibility = View.GONE
+    private val hideVideoHeaderRunnable: Runnable = object : Runnable {
+        override fun run() {
+            if (!binding.btnOpenWithMedia.hasFocus() && !binding.btnCloseVideo.hasFocus()) {
+                binding.nowPlayingBanner.visibility = View.GONE
+            } else {
+                binding.nowPlayingBanner.postDelayed(this, 3000)
+            }
+        }
     }
 
-    private fun scheduleVideoHeaderAutoHide() {
+
+    private fun scheduleVideoHeaderAutoHide(requestFocusOnButton: Boolean = false) {
         binding.nowPlayingBanner.visibility = View.VISIBLE
         binding.nowPlayingBanner.bringToFront()
         binding.nowPlayingBanner.removeCallbacks(hideVideoHeaderRunnable)
         binding.nowPlayingBanner.postDelayed(hideVideoHeaderRunnable, 3000)
+
+        if (requestFocusOnButton) {
+            binding.btnOpenWithMedia.post {
+                binding.btnOpenWithMedia.requestFocus()
+            }
+        }
     }
+
 
     private fun openOrPlayMediaItem(item: TvArchiveItem) {
         stopPlaybackAndShowHome()
@@ -508,16 +522,46 @@ class TvMainActivity : FragmentActivity() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (binding.playerView.visibility == View.VISIBLE) {
-            if (keyCode == KeyEvent.KEYCODE_BACK) {
-                stopPlaybackAndShowHome()
-                return true
-            } else if (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN || keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT || keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
-                scheduleVideoHeaderAutoHide()
-                return true
+            val isHeaderFocused = binding.btnOpenWithMedia.hasFocus() || binding.btnCloseVideo.hasFocus()
+            when (keyCode) {
+                KeyEvent.KEYCODE_BACK -> {
+                    if (isHeaderFocused) {
+                        binding.nowPlayingBanner.removeCallbacks(hideVideoHeaderRunnable)
+                        binding.nowPlayingBanner.visibility = View.GONE
+                        binding.playerView.requestFocus()
+                        return true
+                    } else {
+                        stopPlaybackAndShowHome()
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    scheduleVideoHeaderAutoHide(requestFocusOnButton = true)
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    if (isHeaderFocused) {
+                        binding.nowPlayingBanner.removeCallbacks(hideVideoHeaderRunnable)
+                        binding.nowPlayingBanner.visibility = View.GONE
+                        binding.playerView.requestFocus()
+                        return true
+                    } else {
+                        scheduleVideoHeaderAutoHide()
+                        return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    scheduleVideoHeaderAutoHide()
+                    if (!isHeaderFocused && binding.nowPlayingBanner.visibility == View.VISIBLE) {
+                        binding.btnOpenWithMedia.requestFocus()
+                        return true
+                    }
+                }
             }
         }
         return super.onKeyDown(keyCode, event)
     }
+
 
     private fun stopPlaybackAndShowHome() {
         binding.nowPlayingBanner.removeCallbacks(hideVideoHeaderRunnable)
