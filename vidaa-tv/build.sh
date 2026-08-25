@@ -12,6 +12,7 @@ echo "📦 Packaging 2TV for Hisense Smart TV (VIDAA)"
 echo "=========================================="
 
 mkdir -p "$SCRIPT_DIR/css" "$SCRIPT_DIR/js"
+cp "$CORE_DIR/index.html" "$SCRIPT_DIR/index.html"
 cp "$CORE_DIR/css/style.css" "$SCRIPT_DIR/css/style.css"
 cp "$CORE_DIR/js/m3u-parser.js" "$SCRIPT_DIR/js/m3u-parser.js"
 cp "$CORE_DIR/js/player.js" "$SCRIPT_DIR/js/player.js"
