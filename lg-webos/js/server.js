@@ -1,6 +1,7 @@
 /**
  * 2TV Samsung Smart TV HTTP Receiver Server Module
  * Implements 2TV REST Protocol (/api/ping, /api/pair, /api/play, /api/upload)
+ * Local IP Discovery via Tizen APIs, webOS Luna APIs, STUN WebRTC, and LocalStorage
  */
 (function (window) {
     'use strict';
@@ -10,7 +11,13 @@
         this.pairingToken = pairingToken || '2TV-TOKEN-123';
         this.onPlayCallback = onPlayCallback;
         this.onPairCallback = onPairCallback;
-        this.tvIpAddress = '127.0.0.1';
+        this.tvIpAddress = '192.168.1.100';
+
+        // Check if user previously saved a manual IP
+        try {
+            var savedIp = localStorage.getItem('2TV_MANUAL_IP');
+            if (savedIp) this.tvIpAddress = savedIp;
+        } catch (e) {}
     }
 
     TvServer.prototype = {
@@ -21,26 +28,54 @@
 
         detectIpAddress: function () {
             var self = this;
-            // Retrieve local IP via Tizen Network API if available
-            if (typeof tizen !== 'undefined' && tizen.networkbearerselection) {
+
+            // 1. Retrieve local IP via Tizen SystemInfo API (Samsung TV)
+            if (typeof tizen !== 'undefined' && tizen.systeminfo) {
                 try {
-                    // Fallback IP detection
+                    tizen.systeminfo.getPropertyValue('NETWORK', function (net) {
+                        if (net && net.ipAddress && net.ipAddress !== '127.0.0.1') {
+                            self.tvIpAddress = net.ipAddress;
+                            if (window.App) window.App.updateIpDisplay(self.tvIpAddress, self.port);
+                        }
+                    });
                 } catch (e) {}
             }
 
-            // WebRTC Local IP Discovery Fallback
+            // 2. Retrieve local IP via LG webOS Luna ConnectionManager API
+            if (typeof webOS !== 'undefined' && webOS.service) {
+                try {
+                    webOS.service.request('luna://com.webos.service.connectionmanager', {
+                        method: 'getStatus',
+                        onSuccess: function (res) {
+                            var ip = null;
+                            if (res && res.wired && res.wired.ipAddress) ip = res.wired.ipAddress;
+                            else if (res && res.wifi && res.wifi.ipAddress) ip = res.wifi.ipAddress;
+
+                            if (ip && ip !== '127.0.0.1') {
+                                self.tvIpAddress = ip;
+                                if (window.App) window.App.updateIpDisplay(self.tvIpAddress, self.port);
+                            }
+                        }
+                    });
+                } catch (e) {}
+            }
+
+            // 3. WebRTC Local IP Discovery via STUN Server
             try {
                 var RTCPeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection;
                 if (RTCPeerConnection) {
-                    var rtc = new RTCPeerConnection({ iceServers: [] });
+                    var rtc = new RTCPeerConnection({
+                        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+                    });
                     rtc.createDataChannel('');
                     rtc.createOffer(function (offerDesc) {
                         rtc.setLocalDescription(offerDesc);
                     }, function (e) {});
+
                     rtc.onicecandidate = function (evt) {
-                        if (evt.candidate) {
+                        if (evt && evt.candidate && evt.candidate.candidate) {
                             var ipMatch = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(evt.candidate.candidate);
-                            if (ipMatch && ipMatch[1] && ipMatch[1] !== '127.0.0.1') {
+                            if (ipMatch && ipMatch[1] && ipMatch[1] !== '127.0.0.1' && ipMatch[1] !== '0.0.0.0') {
                                 self.tvIpAddress = ipMatch[1];
                                 if (window.App) window.App.updateIpDisplay(self.tvIpAddress, self.port);
                             }
@@ -52,9 +87,17 @@
             }
         },
 
+        setManualIp: function (ip) {
+            if (!ip) return;
+            this.tvIpAddress = ip;
+            try {
+                localStorage.setItem('2TV_MANUAL_IP', ip);
+            } catch (e) {}
+            if (window.App) window.App.updateIpDisplay(this.tvIpAddress, this.port);
+        },
+
         startListening: function () {
             var self = this;
-            // Listen for cross-origin or local WebSocket / Fetch requests
             window.addEventListener('message', function (event) {
                 try {
                     var data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;

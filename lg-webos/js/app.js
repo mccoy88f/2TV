@@ -49,6 +49,7 @@
             var btnHistory = document.getElementById('btn-show-history');
             var btnCloseHistory = document.getElementById('btn-close-history-modal');
             var btnCloseM3u = document.getElementById('btn-close-m3u-modal');
+            var ipElement = document.getElementById('tv-ip-display');
 
             if (btnPairings) {
                 btnPairings.addEventListener('click', function () {
@@ -74,6 +75,19 @@
                     if (modal) modal.classList.remove('active');
                     self.focusedGroup = 'CONTROL_BAR';
                     self.updateFocus();
+                });
+            }
+
+            if (ipElement) {
+                ipElement.style.cursor = 'pointer';
+                ipElement.addEventListener('click', function () {
+                    var currentIp = self.server ? self.server.tvIpAddress : '192.168.1.100';
+                    var newIp = prompt('Inserisci l\'indirizzo IP locale della TV/Dispositivo sulla tua rete Wi-Fi:', currentIp);
+                    if (newIp && newIp.trim()) {
+                        if (self.server) self.server.setManualIp(newIp.trim());
+                        else self.updateIpDisplay(newIp.trim(), 8080);
+                        self.showToast('IP aggiornato a: ' + newIp.trim());
+                    }
                 });
             }
         },
@@ -207,10 +221,10 @@
 
         updateIpDisplay: function (detectedIp, detectedPort) {
             var ipElement = document.getElementById('tv-ip-display');
-            var rawIp = detectedIp || (this.server ? this.server.tvIpAddress : null) || window.location.hostname || '192.168.1.100';
+            var rawIp = detectedIp || (this.server ? this.server.tvIpAddress : null) || '192.168.1.100';
             
-            // Ensure IP is a valid numeric IPv4 address for local Wi-Fi pairing
-            var isNumericIp = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/.test(rawIp);
+            // Validate IPv4 numeric format
+            var isNumericIp = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/.test(rawIp) && rawIp !== '127.0.0.1';
             var hostIp = isNumericIp ? rawIp : '192.168.1.100';
             var hostPort = parseInt(detectedPort || window.location.port || 8080, 10);
 
