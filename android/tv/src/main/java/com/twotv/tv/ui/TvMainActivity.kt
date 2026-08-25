@@ -84,8 +84,20 @@ class TvMainActivity : FragmentActivity() {
                 }
             }
 
+            // Check for App Updates from GitHub Releases
+            val updateInfo = com.twotv.tv.util.AppUpdater.checkForUpdate(
+                currentVersionName = com.twotv.tv.BuildConfig.VERSION_NAME,
+                isTv = true
+            )
+            if (updateInfo != null) {
+                withContext(Dispatchers.Main) {
+                    showUpdateAvailableTvDialog(updateInfo)
+                }
+            }
+
             // Start Ktor Embedded Server
             embeddedServer = TvEmbeddedServer(
+
                 context = applicationContext,
                 port = 8080,
                 pairingToken = PAIRING_TOKEN,
@@ -139,7 +151,48 @@ class TvMainActivity : FragmentActivity() {
         }
     }
 
+    private fun showUpdateAvailableTvDialog(updateInfo: com.twotv.tv.util.UpdateInfo) {
+        AlertDialog.Builder(this)
+            .setTitle("Aggiornamento Disponibile (v${updateInfo.latestVersionName})")
+            .setMessage("${updateInfo.releaseNotes}\n\nDesideri scaricare ed installare subito l'aggiornamento?")
+            .setPositiveButton("Aggiorna Ora") { dialog, _ ->
+                dialog.dismiss()
+                downloadAndInstallTvUpdate(updateInfo.downloadUrl)
+            }
+            .setNegativeButton("Più Tardi", null)
+            .show()
+    }
+
+    private fun downloadAndInstallTvUpdate(downloadUrl: String) {
+        binding.uploadProgressCard.visibility = View.VISIBLE
+        binding.uploadProgressCard.bringToFront()
+        binding.uploadTitleText.text = "Download Aggiornamento TV..."
+
+        lifecycleScope.launch {
+            val result = com.twotv.tv.util.AppUpdater.downloadAndInstallApk(
+                context = this@TvMainActivity,
+                downloadUrl = downloadUrl,
+                authority = "com.twotv.tv.fileprovider",
+                onProgress = { percent ->
+                    binding.uploadProgressBar.progress = percent
+                    binding.uploadPercentText.text = "$percent%"
+                }
+            )
+
+            binding.uploadProgressCard.visibility = View.GONE
+
+            if (result.isFailure) {
+                Toast.makeText(
+                    this@TvMainActivity,
+                    "Errore download aggiornamento: ${result.exceptionOrNull()?.localizedMessage}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
     private fun showManagePairingsDialog() {
+
         val itemsText = if (pairedDevices.isEmpty()) {
             arrayOf("Nessun dispositivo accoppiato al momento")
         } else {

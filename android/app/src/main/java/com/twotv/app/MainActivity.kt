@@ -74,6 +74,18 @@ class MainActivity : ComponentActivity() {
                 var currentScreen by remember { mutableStateOf(Screen.HOME) }
                 var showQrScannerDialog by remember { mutableStateOf(false) }
                 var showAboutDialog by remember { mutableStateOf(false) }
+                var pendingUpdateInfo by remember { mutableStateOf<com.twotv.app.network.UpdateInfo?>(null) }
+
+                LaunchedEffect(Unit) {
+                    val update = com.twotv.app.network.AppUpdater.checkForUpdate(
+                        currentVersionName = BuildConfig.VERSION_NAME,
+                        isTv = false
+                    )
+                    if (update != null) {
+                        pendingUpdateInfo = update
+                    }
+                }
+
 
                 Scaffold(
                     topBar = {
@@ -137,11 +149,19 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    if (pendingUpdateInfo != null) {
+                        com.twotv.app.ui.components.UpdateAvailableDialog(
+                            updateInfo = pendingUpdateInfo!!,
+                            onDismiss = { pendingUpdateInfo = null }
+                        )
+                    }
+
                     if (showAboutDialog) {
                         AboutDialog(
                             onDismiss = { showAboutDialog = false }
                         )
                     }
+
 
                     if (showQrScannerDialog) {
                         QRScannerDialog(
