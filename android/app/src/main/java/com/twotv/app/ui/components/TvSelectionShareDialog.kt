@@ -93,7 +93,8 @@ fun TvSelectionShareDialog(
                                     Icon(Icons.Default.Tv, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(tv.name, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+                                        Text(tv.displayName, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold))
+
                                         Text("${tv.ip}:${tv.port}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                     Icon(Icons.Default.ChevronRight, contentDescription = null)

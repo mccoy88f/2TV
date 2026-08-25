@@ -388,9 +388,10 @@ private fun ActiveTvCard(
                 Column {
                     if (selectedTv != null) {
                         Text(
-                            text = selectedTv.name,
+                            text = selectedTv.displayName,
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                         )
+
 
                         Text(
                             text = "${selectedTv.ip}:${selectedTv.port} • " + if (isTvOnline == false) "Non raggiungibile" else "Connessa",

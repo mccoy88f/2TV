@@ -170,11 +170,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             url = "[File Caricato] $title",
                             mediaType = selectedMediaType.value,
                             saveToTv = saveToTv.value,
-                            targetTvName = tv.name,
+                            targetTvName = tv.displayName,
                             isSuccess = true
                         )
                     )
-                    sendUiState.value = SendUiState.Success("File caricato e avviato su ${tv.name}!")
+                    sendUiState.value = SendUiState.Success("File caricato e avviato su ${tv.displayName}!")
                 } else {
                     val errorMsg = result.exceptionOrNull()?.message ?: "Errore caricamento file"
                     sendUiState.value = SendUiState.Error(errorMsg)
@@ -210,11 +210,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             url = url,
                             mediaType = selectedMediaType.value,
                             saveToTv = saveToTv.value,
-                            targetTvName = tv.name,
+                            targetTvName = tv.displayName,
                             isSuccess = true
                         )
                     )
-                    sendUiState.value = SendUiState.Success("Inviato con successo a ${tv.name}!")
+                    sendUiState.value = SendUiState.Success("Inviato con successo a ${tv.displayName}!")
                 } else {
                     val errorMsg = result.exceptionOrNull()?.message ?: "Errore di connessione"
                     historyDao.insertHistory(
@@ -223,10 +223,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             url = url,
                             mediaType = selectedMediaType.value,
                             saveToTv = saveToTv.value,
-                            targetTvName = tv.name,
+                            targetTvName = tv.displayName,
                             isSuccess = false
                         )
                     )
+
                     sendUiState.value = SendUiState.Error(errorMsg)
                 }
             }
@@ -298,6 +299,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             tvDao.deleteTv(tv)
         }
     }
+
+    fun updateTvCustomName(tv: PairedTv, customName: String?) {
+        val newCustomName = if (customName.isNullOrBlank()) null else customName.trim()
+        val updatedTv = tv.copy(customName = newCustomName)
+        viewModelScope.launch {
+            tvDao.insertOrUpdateTv(updatedTv)
+        }
+    }
+
 
     fun deleteHistoryItem(id: Long) {
         viewModelScope.launch {

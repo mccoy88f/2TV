@@ -26,6 +26,7 @@ fun TvsScreen(
     val selectedTv by viewModel.selectedTv.collectAsState()
 
     var showManualAddDialog by remember { mutableStateOf(false) }
+    var editingTv by remember { mutableStateOf<PairedTv?>(null) }
 
     Column(
         modifier = Modifier
@@ -126,6 +127,7 @@ fun TvsScreen(
                         tv = tv,
                         isSelected = isSelected,
                         onSelect = { viewModel.selectTv(tv.id) },
+                        onEditNickname = { editingTv = tv },
                         onDelete = { viewModel.deleteTv(tv) }
                     )
                 }
@@ -142,6 +144,17 @@ fun TvsScreen(
             }
         )
     }
+
+    editingTv?.let { tv ->
+        EditNicknameDialog(
+            tv = tv,
+            onDismiss = { editingTv = null },
+            onSave = { newName ->
+                viewModel.updateTvCustomName(tv, newName)
+                editingTv = null
+            }
+        )
+    }
 }
 
 @Composable
@@ -149,6 +162,7 @@ private fun PairedTvItemCard(
     tv: PairedTv,
     isSelected: Boolean,
     onSelect: () -> Unit,
+    onEditNickname: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
@@ -175,7 +189,7 @@ private fun PairedTvItemCard(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = tv.name,
+                        text = tv.displayName,
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                     )
                     if (isSelected) {
@@ -187,11 +201,20 @@ private fun PairedTvItemCard(
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
+                val subText = if (!tv.customName.isNullOrBlank()) {
+                    "IP: ${tv.ip}:${tv.port} • ${tv.name}"
+                } else {
+                    "IP: ${tv.ip}:${tv.port} (${tv.platform})"
+                }
                 Text(
-                    text = "IP: ${tv.ip}:${tv.port} (${tv.platform})",
+                    text = subText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            IconButton(onClick = onEditNickname) {
+                Icon(Icons.Default.Edit, contentDescription = "Modifica Nickname", tint = MaterialTheme.colorScheme.primary)
             }
 
             IconButton(onClick = onDelete) {
@@ -199,6 +222,49 @@ private fun PairedTvItemCard(
             }
         }
     }
+}
+
+@Composable
+private fun EditNicknameDialog(
+    tv: PairedTv,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var nicknameText by remember { mutableStateOf(tv.customName ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nickname TV") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Assegna un soprannome personalizzato a questa TV (es. TV Soggiorno, TV Camera):",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = nicknameText,
+                    onValueChange = { nicknameText = it },
+                    label = { Text("Nickname Personalizzato") },
+                    placeholder = { Text(tv.name) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(nicknameText) }
+            ) {
+                Text("Salva")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }
 
 @Composable

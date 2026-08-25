@@ -21,8 +21,13 @@ data class PairedTv(
     val pairingToken: String,
     val platform: String, // androidtv, webos, tizen, simulator
     val isSelected: Boolean = false,
-    val lastSeenAt: Long = System.currentTimeMillis()
-)
+    val lastSeenAt: Long = System.currentTimeMillis(),
+    val customName: String? = null
+) {
+    val displayName: String
+        get() = if (!customName.isNullOrBlank()) customName else name
+}
+
 
 @Entity(tableName = "send_history")
 data class SendHistory(

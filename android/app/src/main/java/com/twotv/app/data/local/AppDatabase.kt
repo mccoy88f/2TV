@@ -64,7 +64,7 @@ class Converters {
     }
 }
 
-@Database(entities = [PairedTv::class, SendHistory::class], version = 1, exportSchema = false)
+@Database(entities = [PairedTv::class, SendHistory::class], version = 2, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun pairedTvDao(): PairedTvDao
@@ -80,10 +80,13 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "twotv_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
                 INSTANCE = instance
                 instance
             }
         }
     }
 }
+
