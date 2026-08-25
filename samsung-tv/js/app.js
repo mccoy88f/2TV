@@ -248,18 +248,17 @@
                 }
             }
 
-            if (!hostIp) return;
-
             var token = this.receiver ? this.receiver.pairingToken : '2TV-DEMO';
             var nickname = this.receiver ? this.receiver.tvNickname : '2TV Receiver';
             
-            // Local Wi-Fi JSON Payload for 2TV Android Mobile Scanner
+            // Explicit protocol="ws" field for Web Receivers
             var qrPayload = JSON.stringify({
                 name: nickname,
-                ip: hostIp,
+                ip: hostIp || '127.0.0.1',
                 port: hostPort,
                 pairingToken: token,
-                platform: 'web'
+                platform: 'web',
+                protocol: 'ws'
             });
 
             var qrContainer = document.getElementById('qrcode');

@@ -19,7 +19,8 @@ data class PairedTv(
     val ip: String,
     val port: Int,
     val pairingToken: String,
-    val platform: String, // androidtv, webos, tizen, simulator
+    val platform: String, // androidtv, webos, tizen, simulator, web
+    val protocol: String = "http", // "http" or "ws"
     val isSelected: Boolean = false,
     val lastSeenAt: Long = System.currentTimeMillis(),
     val customName: String? = null
@@ -54,10 +55,11 @@ data class MediaPayload(
 @Serializable
 data class PairingQrPayload(
     @SerialName("name") val name: String,
-    @SerialName("ip") val ip: String,
-    @SerialName("port") val port: Int,
+    @SerialName("ip") val ip: String = "127.0.0.1",
+    @SerialName("port") val port: Int = 8080,
     @SerialName("pairingToken") val pairingToken: String,
-    @SerialName("platform") val platform: String = "generic"
+    @SerialName("platform") val platform: String = "generic",
+    @SerialName("protocol") val protocol: String = "http"
 )
 
 @Serializable

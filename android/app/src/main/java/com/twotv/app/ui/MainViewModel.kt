@@ -257,6 +257,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     port = qrData.port,
                     pairingToken = qrData.pairingToken,
                     platform = qrData.platform,
+                    protocol = qrData.protocol,
                     isSelected = true
                 )
             } else {
