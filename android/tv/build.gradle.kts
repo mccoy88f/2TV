@@ -13,8 +13,8 @@ android {
         applicationId = "com.twotv.tv"
         minSdk = 26
         targetSdk = 35
-        versionCode = 37
-        versionName = "2.0.2"
+        versionCode = 39
+        versionName = "2.0.4"
 
 
 
