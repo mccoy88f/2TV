@@ -76,11 +76,18 @@ class TvMainActivity : FragmentActivity() {
             }
         }
 
+        binding.btnM3uList.setOnClickListener {
+            if (currentM3uChannels.isNotEmpty()) {
+                showM3uChannelsDialog(currentM3uTitle, currentM3uChannels)
+            }
+        }
+
         binding.btnCloseVideo.setOnClickListener {
             stopPlaybackAndShowHome()
         }
 
         setupFocusScaleEffects()
+
 
 
 
@@ -391,9 +398,12 @@ class TvMainActivity : FragmentActivity() {
     }
 
     private var activePreviewDialog: Dialog? = null
+    private var currentM3uTitle: String = ""
+    private var currentM3uChannels: List<M3uChannel> = emptyList()
+
     private val hideVideoHeaderRunnable: Runnable = object : Runnable {
         override fun run() {
-            if (!binding.btnOpenWithMedia.hasFocus() && !binding.btnCloseVideo.hasFocus()) {
+            if (!binding.btnM3uList.hasFocus() && !binding.btnOpenWithMedia.hasFocus() && !binding.btnCloseVideo.hasFocus()) {
                 binding.nowPlayingBanner.visibility = View.GONE
             } else {
                 binding.nowPlayingBanner.postDelayed(this, 3000)
@@ -409,8 +419,12 @@ class TvMainActivity : FragmentActivity() {
         binding.nowPlayingBanner.postDelayed(hideVideoHeaderRunnable, 3000)
 
         if (requestFocusOnButton) {
-            binding.btnOpenWithMedia.post {
-                binding.btnOpenWithMedia.requestFocus()
+            binding.nowPlayingBanner.post {
+                if (binding.btnM3uList.visibility == View.VISIBLE) {
+                    binding.btnM3uList.requestFocus()
+                } else {
+                    binding.btnOpenWithMedia.requestFocus()
+                }
             }
         }
     }
@@ -439,6 +453,8 @@ class TvMainActivity : FragmentActivity() {
 
                 withContext(Dispatchers.Main) {
                     if (channels.isNotEmpty()) {
+                        currentM3uTitle = item.title
+                        currentM3uChannels = channels
                         showM3uChannelsDialog(item.title, channels)
                     } else {
                         Toast.makeText(this@TvMainActivity, "Nessun canale valido trovato nella playlist M3U", Toast.LENGTH_LONG).show()
@@ -464,31 +480,23 @@ class TvMainActivity : FragmentActivity() {
             .setTitle("$playlistTitle (${channels.size} canali)")
             .setItems(channelNames) { _, index ->
                 val selectedChannel = channels[index]
-                showChannelActionDialog(selectedChannel)
+                playDirectStream(selectedChannel.streamUrl, selectedChannel.name, isM3u = true)
             }
             .setNegativeButton("Chiudi", null)
             .show()
     }
 
-    private fun showChannelActionDialog(channel: M3uChannel) {
-        val choices = arrayOf("Riproduci su 2TV", "Apri con... (App Esterne)")
-        AlertDialog.Builder(this)
-            .setTitle(channel.name)
-            .setItems(choices) { _, choiceIndex ->
-                when (choiceIndex) {
-                    0 -> playDirectStream(channel.streamUrl, channel.name)
-                    1 -> openMediaWithIntentChooser(channel.streamUrl, channel.name)
-                }
-            }
-            .setNegativeButton("Annulla", null)
-            .show()
-    }
-
-    private fun playDirectStream(pathOrUrl: String, title: String) {
+    private fun playDirectStream(pathOrUrl: String, title: String, isM3u: Boolean = false) {
         currentPlayingItemUrl = pathOrUrl
         binding.nowPlayingTitle.text = title
         binding.mediaTypeBadge.text = "STREAM"
         binding.mediaTypeBadge.setBackgroundColor(android.graphics.Color.parseColor("#8B5CF6"))
+
+        if (isM3u || currentM3uChannels.isNotEmpty()) {
+            binding.btnM3uList.visibility = View.VISIBLE
+        } else {
+            binding.btnM3uList.visibility = View.GONE
+        }
 
         binding.bottomControlBar.visibility = View.GONE
         binding.idleContainer.visibility = View.GONE
@@ -500,6 +508,7 @@ class TvMainActivity : FragmentActivity() {
         exoPlayer?.prepare()
         exoPlayer?.play()
     }
+
 
     private fun openOrPlayMediaItem(item: TvArchiveItem) {
         stopPlaybackAndShowHome()
@@ -624,7 +633,7 @@ class TvMainActivity : FragmentActivity() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (binding.playerView.visibility == View.VISIBLE) {
-            val isHeaderFocused = binding.btnOpenWithMedia.hasFocus() || binding.btnCloseVideo.hasFocus()
+            val isHeaderFocused = binding.btnM3uList.hasFocus() || binding.btnOpenWithMedia.hasFocus() || binding.btnCloseVideo.hasFocus()
             when (keyCode) {
                 KeyEvent.KEYCODE_BACK -> {
                     if (isHeaderFocused) {
@@ -655,7 +664,11 @@ class TvMainActivity : FragmentActivity() {
                 KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> {
                     scheduleVideoHeaderAutoHide()
                     if (!isHeaderFocused && binding.nowPlayingBanner.visibility == View.VISIBLE) {
-                        binding.btnOpenWithMedia.requestFocus()
+                        if (binding.btnM3uList.visibility == View.VISIBLE) {
+                            binding.btnM3uList.requestFocus()
+                        } else {
+                            binding.btnOpenWithMedia.requestFocus()
+                        }
                         return true
                     }
                 }
@@ -668,6 +681,7 @@ class TvMainActivity : FragmentActivity() {
     private fun stopPlaybackAndShowHome() {
         binding.nowPlayingBanner.removeCallbacks(hideVideoHeaderRunnable)
         binding.nowPlayingBanner.visibility = View.GONE
+        binding.btnM3uList.visibility = View.GONE
 
         activePreviewDialog?.let {
             if (it.isShowing) {
@@ -707,6 +721,7 @@ class TvMainActivity : FragmentActivity() {
         val buttons = listOf(
             binding.btnManagePairings,
             binding.btnShowHistory,
+            binding.btnM3uList,
             binding.btnOpenWithMedia,
             binding.btnCloseVideo
         )
@@ -720,6 +735,7 @@ class TvMainActivity : FragmentActivity() {
             }
         }
     }
+
 
     override fun onDestroy() {
         super.onDestroy()
