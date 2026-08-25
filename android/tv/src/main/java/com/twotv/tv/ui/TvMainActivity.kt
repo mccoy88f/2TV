@@ -73,6 +73,11 @@ class TvMainActivity : FragmentActivity() {
             }
         }
 
+        binding.btnCloseVideo.setOnClickListener {
+            stopPlaybackAndShowHome()
+        }
+
+
 
 
         // Initialize components asynchronously in background thread
@@ -357,17 +362,37 @@ class TvMainActivity : FragmentActivity() {
     }
 
     private var activePreviewDialog: Dialog? = null
+    private val hideVideoHeaderRunnable = Runnable {
+        binding.nowPlayingBanner.visibility = View.GONE
+    }
+
+    private fun scheduleVideoHeaderAutoHide() {
+        binding.nowPlayingBanner.visibility = View.VISIBLE
+        binding.nowPlayingBanner.bringToFront()
+        binding.nowPlayingBanner.removeCallbacks(hideVideoHeaderRunnable)
+        binding.nowPlayingBanner.postDelayed(hideVideoHeaderRunnable, 3000)
+    }
 
     private fun openOrPlayMediaItem(item: TvArchiveItem) {
         stopPlaybackAndShowHome()
         currentPlayingItemUrl = item.pathOrUrl
 
-        binding.nowPlayingBanner.visibility = View.VISIBLE
-
         binding.nowPlayingTitle.text = item.title
-        binding.nowPlayingUrl.text = item.pathOrUrl
-        binding.mediaTypeBadge.text = item.category.name
-        binding.nowPlayingBanner.bringToFront()
+
+        when (item.category) {
+            MediaCategory.STREAM -> {
+                binding.mediaTypeBadge.text = "STREAM"
+                binding.mediaTypeBadge.setBackgroundColor(android.graphics.Color.parseColor("#8B5CF6"))
+            }
+            MediaCategory.WEB -> {
+                binding.mediaTypeBadge.text = "LINK"
+                binding.mediaTypeBadge.setBackgroundColor(android.graphics.Color.parseColor("#0284C7"))
+            }
+            else -> {
+                binding.mediaTypeBadge.text = "FILE"
+                binding.mediaTypeBadge.setBackgroundColor(android.graphics.Color.parseColor("#10B981"))
+            }
+        }
 
         when (item.category) {
             // STREAM: Played natively inside 2TV ExoPlayer
@@ -376,7 +401,7 @@ class TvMainActivity : FragmentActivity() {
                 binding.idleContainer.visibility = View.GONE
                 binding.playerView.visibility = View.VISIBLE
                 binding.playerView.bringToFront()
-                binding.playerView.requestFocus()
+                scheduleVideoHeaderAutoHide()
                 val mediaItem = MediaItem.fromUri(item.pathOrUrl)
                 exoPlayer?.setMediaItem(mediaItem)
                 exoPlayer?.prepare()
@@ -418,7 +443,7 @@ class TvMainActivity : FragmentActivity() {
                         binding.idleContainer.visibility = View.GONE
                         binding.playerView.visibility = View.VISIBLE
                         binding.playerView.bringToFront()
-                        binding.playerView.requestFocus()
+                        scheduleVideoHeaderAutoHide()
                         val file = File(item.pathOrUrl)
                         val mediaItem = if (file.exists()) {
                             MediaItem.fromUri(Uri.fromFile(file))
@@ -435,10 +460,6 @@ class TvMainActivity : FragmentActivity() {
                 }
             }
         }
-
-        binding.root.postDelayed({
-            binding.nowPlayingBanner.visibility = View.GONE
-        }, 4000)
     }
 
 
@@ -461,24 +482,18 @@ class TvMainActivity : FragmentActivity() {
         try {
             val file = File(pathOrUrl)
             if (file.exists()) {
-                val uri: Uri = FileProvider.getUriForFile(this, "com.twotv.tv.fileprovider", file)
-                val mimeType = getMimeTypeFromExtension(file.extension)
+                val uri = FileProvider.getUriForFile(this, "com.twotv.tv.fileprovider", file)
+                val ext = file.extension.lowercase()
+                val mimeType = getMimeTypeFromExtension(ext)
                 val intent = Intent(Intent.ACTION_VIEW).apply {
                     setDataAndType(uri, mimeType)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                startActivity(Intent.createChooser(intent, "Apri file con..."))
-            } else if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pathOrUrl)).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
                 startActivity(intent)
-            } else {
-                Toast.makeText(this, "File non trovato sul dispositivo: $pathOrUrl", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
-            Toast.makeText(this, "Nessuna app predefinita per aprire il file: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Nessuna app predefinita per aprire il file: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -492,14 +507,22 @@ class TvMainActivity : FragmentActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK && binding.playerView.visibility == View.VISIBLE) {
-            stopPlaybackAndShowHome()
-            return true
+        if (binding.playerView.visibility == View.VISIBLE) {
+            if (keyCode == KeyEvent.KEYCODE_BACK) {
+                stopPlaybackAndShowHome()
+                return true
+            } else if (keyCode == KeyEvent.KEYCODE_DPAD_UP || keyCode == KeyEvent.KEYCODE_DPAD_DOWN || keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT || keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
+                scheduleVideoHeaderAutoHide()
+                return true
+            }
         }
         return super.onKeyDown(keyCode, event)
     }
 
     private fun stopPlaybackAndShowHome() {
+        binding.nowPlayingBanner.removeCallbacks(hideVideoHeaderRunnable)
+        binding.nowPlayingBanner.visibility = View.GONE
+
         activePreviewDialog?.let {
             if (it.isShowing) {
                 try { it.dismiss() } catch (e: Exception) { e.printStackTrace() }
