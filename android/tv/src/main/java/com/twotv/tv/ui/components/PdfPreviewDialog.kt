@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,6 +25,8 @@ class PdfPreviewDialog(
     private val pdfFile: File
 ) : Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen) {
 
+    private var recyclerView: RecyclerView? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestWindowFeature(Window.FEATURE_NO_TITLE)
@@ -36,7 +39,7 @@ class PdfPreviewDialog(
         setContentView(view)
 
         val titleTextView = view.findViewById<TextView>(R.id.pdfTitleText)
-        val recyclerView = view.findViewById<RecyclerView>(R.id.pdfRecyclerView)
+        recyclerView = view.findViewById(R.id.pdfRecyclerView)
         val closeBtn = view.findViewById<View>(R.id.btnClosePdf)
 
         titleTextView.text = title
@@ -46,11 +49,42 @@ class PdfPreviewDialog(
             val fileDescriptor = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
             val pdfRenderer = PdfRenderer(fileDescriptor)
 
-            recyclerView.layoutManager = LinearLayoutManager(context)
-            recyclerView.adapter = PdfPageAdapter(pdfRenderer)
+            recyclerView?.layoutManager = LinearLayoutManager(context)
+            recyclerView?.adapter = PdfPageAdapter(pdfRenderer)
+            recyclerView?.requestFocus()
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            KeyEvent.KEYCODE_CHANNEL_DOWN,
+            KeyEvent.KEYCODE_PAGE_DOWN -> {
+                recyclerView?.smoothScrollBy(0, 450)
+                return true
+            }
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_CHANNEL_UP,
+            KeyEvent.KEYCODE_PAGE_UP -> {
+                recyclerView?.smoothScrollBy(0, -450)
+                return true
+            }
+            KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                recyclerView?.smoothScrollBy(0, 900)
+                return true
+            }
+            KeyEvent.KEYCODE_DPAD_LEFT -> {
+                recyclerView?.smoothScrollBy(0, -900)
+                return true
+            }
+            KeyEvent.KEYCODE_BACK -> {
+                dismiss()
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     private class PdfPageAdapter(private val renderer: PdfRenderer) :
