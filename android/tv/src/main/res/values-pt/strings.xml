@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">2TV</string>
+    <string name="tv_header_title">2TV para Android TV</string>
+    <string name="tv_subtitle">Escanear o código QR com a app 2TV Mobile para partilhar conteúdo</string>
+    <string name="paired_devices_title">Dispositivos Emparelhados</string>
+    <string name="btn_new_pairing">Novo Emparelhamento (Código QR)</string>
+    <string name="btn_manage_pairings">Gerir Emparelhamentos</string>
+    <string name="btn_history">Histórico de Recebidos</string>
+    <string name="btn_qr_code">Mostrar Código QR</string>
+    <string name="btn_open_with">Abrir com...</string>
+    <string name="btn_open">Abrir</string>
+    <string name="btn_play">Reproduzir</string>
+    <string name="btn_delete">Eliminar</string>
+    <string name="no_history">Nenhum conteúdo recebido no histórico</string>
+    <string name="unpair_device">Remover Emparelhamento</string>
+    <string name="now_playing">A Reproduzir</string>
+    <string name="archive_title">Histórico da TV</string>
+    <string name="cat_all">Todos</string>
+    <string name="cat_photo">Fotos</string>
+    <string name="cat_video">Vídeos</string>
+    <string name="cat_audio">Áudio</string>
+    <string name="cat_web">Web</string>
+    <string name="cat_other">Outros</string>
+</resources>

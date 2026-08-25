@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">2TV</string>
+    <string name="tv_header_title">Android TV के लिए 2TV</string>
+    <string name="tv_subtitle">सामग्री साझा करने के लिए 2TV मोबाइल ऐप से QR कोड स्कैन करें</string>
+    <string name="paired_devices_title">पेयर किए गए उपकरण</string>
+    <string name="btn_new_pairing">नया पेयरिंग (QR कोड)</string>
+    <string name="btn_manage_pairings">पेयरिंग प्रबंधित करें</string>
+    <string name="btn_history">प्राप्त इतिहास</string>
+    <string name="btn_qr_code">QR कोड दिखाएं</string>
+    <string name="btn_open_with">इसके साथ खोलें...</string>
+    <string name="btn_open">खोलें</string>
+    <string name="btn_play">चलाएं</string>
+    <string name="btn_delete">हटाएं</string>
+    <string name="no_history">इतिहास में कोई प्राप्त सामग्री नहीं है</string>
+    <string name="unpair_device">पेयरिंग हटाएं</string>
+    <string name="now_playing">अब चल रहा है</string>
+    <string name="archive_title">TV इतिहास</string>
+    <string name="cat_all">सभी</string>
+    <string name="cat_photo">तस्वीरें</string>
+    <string name="cat_video">वीडियो</string>
+    <string name="cat_audio">ऑडियो</string>
+    <string name="cat_web">वेब</string>
+    <string name="cat_other">अन्य</string>
+</resources>

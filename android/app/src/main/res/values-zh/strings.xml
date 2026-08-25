@@ -1,0 +1,63 @@
+<resources>
+    <string name="app_name">2TV</string>
+    <string name="send_mode_title">2TV 推送模式</string>
+    <string name="mode_stream">流媒体</string>
+    <string name="mode_file">文件</string>
+    <string name="mode_link">网页链接</string>
+    
+    <string name="active_tv">当前电视</string>
+    <string name="no_tv_paired">未配对电视</string>
+    <string name="scan_qr_to_pair">扫描电视屏幕上的二维码</string>
+    <string name="scan_qr">扫描二维码</string>
+    <string name="switch_tv">切换电视</string>
+    
+    <string name="share_content">共享内容</string>
+    <string name="url_label">文件或流媒体 URL</string>
+    <string name="title_optional">标题（可选）</string>
+    <string name="save_to_tv">保存到电视</string>
+    <string name="save_to_tv_desc">保存内容到电视历史记录</string>
+    <string name="send_2tv">推送至 2TV</string>
+    <string name="upload_file_2tv">上传 2TV 文件</string>
+    <string name="start_stream_2tv">启动 2TV 流媒体</string>
+    <string name="send_link_2tv">发送 2TV 链接</string>
+    
+    <string name="select_file_btn">选择视频、照片或音频</string>
+    <string name="file_ready">文件已准备好上传</string>
+    <string name="quick_presets">快速测试示例</string>
+    
+    <string name="nav_2tv">2TV</string>
+    <string name="nav_history">历史记录</string>
+    <string name="nav_tvs">已配对电视</string>
+    
+    <string name="history_title">发送历史</string>
+    <string name="history_count">已向电视发送 %1$d 项内容</string>
+    <string name="search_history">搜索历史记录...</string>
+    <string name="no_history">未找到历史记录</string>
+    <string name="clear_history">清除历史记录</string>
+    <string name="resend">重新发送</string>
+    <string name="delete">删除</string>
+    
+    <string name="tvs_title">已配对电视</string>
+    <string name="tvs_count">已配置 %1$d 个屏幕</string>
+    <string name="pair_new_tv">配对新电视</string>
+    <string name="pair_new_tv_desc">扫描电视屏幕上的二维码以在局域网中连接</string>
+    <string name="manual_ip">手动添加 IP</string>
+    <string name="active_badge">当前活动</string>
+    
+    <string name="pair_qr_title">通过二维码配对电视</string>
+    <string name="pair_qr_desc">将电视屏幕上显示的二维码对准框内以与 2TV 配对。</string>
+    <string name="manual_input">手动输入</string>
+    <string name="use_camera">使用相机</string>
+    <string name="cancel">取消</string>
+
+    <string name="select_target_tv">选择目标电视</string>
+    <string name="select_target_tv_desc">选择将共享内容发送到哪个屏幕：</string>
+    <string name="copy_link">复制链接</string>
+    <string name="link_copied">链接已复制到剪贴板！</string>
+    <string name="about_2tv">关于 2TV</string>
+    <string name="author">作者：mccoy88f</string>
+    <string name="version">版本 %1$s</string>
+    <string name="github_repository">GitHub 仓库</string>
+
+    <string name="app_description">轻松将视频流、文件、照片和网页从智能手机共享到 Android TV。</string>
+</resources>

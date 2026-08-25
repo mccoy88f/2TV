@@ -1,0 +1,63 @@
+<resources>
+    <string name="app_name">2TV</string>
+    <string name="send_mode_title">Modo de Envio 2TV</string>
+    <string name="mode_stream">Stream</string>
+    <string name="mode_file">Ficheiro</string>
+    <string name="mode_link">Link Web</string>
+    
+    <string name="active_tv">TV Ativa</string>
+    <string name="no_tv_paired">Nenhuma TV Emparelhada</string>
+    <string name="scan_qr_to_pair">Escanear o código QR na TV</string>
+    <string name="scan_qr">Escanear Código QR</string>
+    <string name="switch_tv">Mudar de TV</string>
+    
+    <string name="share_content">Partilhar Conteúdo</string>
+    <string name="url_label">URL do ficheiro ou stream</string>
+    <string name="title_optional">Título (Opcional)</string>
+    <string name="save_to_tv">Guardar na TV</string>
+    <string name="save_to_tv_desc">Guardar no histórico / memória da TV</string>
+    <string name="send_2tv">Enviar 2TV</string>
+    <string name="upload_file_2tv">Carregar Ficheiro 2TV</string>
+    <string name="start_stream_2tv">Iniciar Stream 2TV</string>
+    <string name="send_link_2tv">Enviar Link 2TV</string>
+    
+    <string name="select_file_btn">Escolher Vídeo, Foto ou Áudio</string>
+    <string name="file_ready">Ficheiro pronto para carregar</string>
+    <string name="quick_presets">Exemplos de Teste Rápido</string>
+    
+    <string name="nav_2tv">2TV</string>
+    <string name="nav_history">Histórico</string>
+    <string name="nav_tvs">TVs Emparelhadas</string>
+    
+    <string name="history_title">Histórico de Envios</string>
+    <string name="history_count">%1$d elementos enviados para a TV</string>
+    <string name="search_history">Pesquisar no histórico...</string>
+    <string name="no_history">Nenhum histórico disponível</string>
+    <string name="clear_history">Limpar Histórico</string>
+    <string name="resend">Reenviar</string>
+    <string name="delete">Eliminar</string>
+    
+    <string name="tvs_title">TVs Emparelhadas</string>
+    <string name="tvs_count">%1$d ecrãs configurados</string>
+    <string name="pair_new_tv">Emparelhar Nova TV</string>
+    <string name="pair_new_tv_desc">Escaneie o código QR no ecrã da TV para se conectar na rede local</string>
+    <string name="manual_ip">Adicionar IP Manual</string>
+    <string name="active_badge">Ativa</string>
+    
+    <string name="pair_qr_title">Emparelhar TV via Código QR</string>
+    <string name="pair_qr_desc">Enquadre o código QR exibido no ecrã da sua TV para emparelhá-la com o 2TV.</string>
+    <string name="manual_input">Entrada Manual</string>
+    <string name="use_camera">Usar Câmara</string>
+    <string name="cancel">Cancelar</string>
+
+    <string name="select_target_tv">Selecionar TV de Destino</string>
+    <string name="select_target_tv_desc">Escolha para qual ecrã enviar o conteúdo partilhado:</string>
+    <string name="copy_link">Copiar Link</string>
+    <string name="link_copied">Link copiado para a área de transferência!</string>
+    <string name="about_2tv">Sobre o 2TV</string>
+    <string name="author">Autor: mccoy88f</string>
+    <string name="version">Versão %1$s</string>
+    <string name="github_repository">Repositório GitHub</string>
+
+    <string name="app_description">Partilhe facilmente transmissões de vídeo, ficheiros e páginas web do smartphone para a TV.</string>
+</resources>

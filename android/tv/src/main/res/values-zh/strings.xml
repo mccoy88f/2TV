@@ -1,0 +1,24 @@
+<resources>
+    <string name="app_name">2TV</string>
+    <string name="tv_header_title">Android TV 版 2TV</string>
+    <string name="tv_subtitle">使用 2TV 手机应用扫描二维码以共享内容</string>
+    <string name="paired_devices_title">已配对设备</string>
+    <string name="btn_new_pairing">新建配对 (二维码)</string>
+    <string name="btn_manage_pairings">管理配对</string>
+    <string name="btn_history">接收历史</string>
+    <string name="btn_qr_code">显示二维码</string>
+    <string name="btn_open_with">打开方式...</string>
+    <string name="btn_open">打开</string>
+    <string name="btn_play">播放</string>
+    <string name="btn_delete">删除</string>
+    <string name="no_history">历史记录中没有接收到的内容</string>
+    <string name="unpair_device">取消配对</string>
+    <string name="now_playing">正在播放</string>
+    <string name="archive_title">电视历史记录</string>
+    <string name="cat_all">全部</string>
+    <string name="cat_photo">照片</string>
+    <string name="cat_video">视频</string>
+    <string name="cat_audio">音频</string>
+    <string name="cat_web">网页</string>
+    <string name="cat_other">其他</string>
+</resources>

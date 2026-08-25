@@ -1,0 +1,63 @@
+<resources>
+    <string name="app_name">2TV</string>
+    <string name="send_mode_title">2TV शेयरिंग मोड</string>
+    <string name="mode_stream">स्ट्रीम</string>
+    <string name="mode_file">फाइल</string>
+    <string name="mode_link">वेब लिंक</string>
+    
+    <string name="active_tv">सक्रिय TV</string>
+    <string name="no_tv_paired">कोई TV पेयर नहीं है</string>
+    <string name="scan_qr_to_pair">TV स्क्रीन पर QR कोड स्कैन करें</string>
+    <string name="scan_qr">QR कोड स्कैन करें</string>
+    <string name="switch_tv">TV बदलें</string>
+    
+    <string name="share_content">सामग्री साझा करें</string>
+    <string name="url_label">फाइल या स्ट्रीम का URL</string>
+    <string name="title_optional">शीर्षक (वैकल्पिक)</string>
+    <string name="save_to_tv">TV पर सहेजें</string>
+    <string name="save_to_tv_desc">TV इतिहास / मेमोरी में सहेजें</string>
+    <string name="send_2tv">2TV भेजें</string>
+    <string name="upload_file_2tv">2TV फाइल अपलोड करें</string>
+    <string name="start_stream_2tv">2TV स्ट्रीम शुरू करें</string>
+    <string name="send_link_2tv">2TV लिंक भेजें</string>
+    
+    <string name="select_file_btn">वीडियो, फोटो या ऑडियो चुनें</string>
+    <string name="file_ready">फाइल अपलोड के लिए तैयार है</string>
+    <string name="quick_presets">त्वरित परीक्षण नमूने</string>
+    
+    <string name="nav_2tv">2TV</string>
+    <string name="nav_history">इतिहास</string>
+    <string name="nav_tvs">पेयर किए गए TV</string>
+    
+    <string name="history_title">भेजने का इतिहास</string>
+    <string name="history_count">TV पर %1$d आइटम भेजे गए</string>
+    <string name="search_history">इतिहास खोजें...</string>
+    <string name="no_history">कोई इतिहास नहीं मिला</string>
+    <string name="clear_history">इतिहास साफ़ करें</string>
+    <string name="resend">पुनः भेजें</string>
+    <string name="delete">हटाएं</string>
+    
+    <string name="tvs_title">पेयर किए गए TV</string>
+    <string name="tvs_count">%1$d स्क्रीन कॉन्फ़िगर की गईं</string>
+    <string name="pair_new_tv">नया TV पेयर करें</string>
+    <string name="pair_new_tv_desc">लोकल नेटवर्क पर कनेक्ट करने के लिए TV स्क्रीन पर QR कोड स्कैन करें</string>
+    <string name="manual_ip">मैनुअल IP जोड़ें</string>
+    <string name="active_badge">सक्रिय</string>
+    
+    <string name="pair_qr_title">QR कोड के जरिए TV पेयर करें</string>
+    <string name="pair_qr_desc">2TV के साथ पेयर करने के लिए अपनी TV स्क्रीन पर दिखाए गए QR कोड को फ्रेम करें।</string>
+    <string name="manual_input">मैनुअल इनपुट</string>
+    <string name="use_camera">कैमरा उपयोग करें</string>
+    <string name="cancel">रद्द करें</string>
+
+    <string name="select_target_tv">लक्ष्य TV चुनें</string>
+    <string name="select_target_tv_desc">चुनें कि साझा की गई सामग्री को किस स्क्रीन पर भेजना है:</string>
+    <string name="copy_link">लिंक कॉपी करें</string>
+    <string name="link_copied">लिंक क्लिपबोर्ड पर कॉपी किया गया!</string>
+    <string name="about_2tv">2TV के बारे में</string>
+    <string name="author">लेखक: mccoy88f</string>
+    <string name="version">संस्करण %1$s</string>
+    <string name="github_repository">GitHub रिपोजिटरी</string>
+
+    <string name="app_description">अपने स्मार्टफोन से वीडियो स्ट्रीम, फाइलें, फोटो और वेब पेज आसानी से Android TV पर साझा करें।</string>
+</resources>
