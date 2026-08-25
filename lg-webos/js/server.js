@@ -68,7 +68,7 @@
                 } catch (e) {}
             }
 
-            // 3. Retrieve local IP dynamically via WebRTC Candidate ICE Gathering
+            // 3. Retrieve local IP dynamically via WebRTC Candidate ICE Gathering (DataChannel)
             try {
                 var RTCPeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection;
                 if (RTCPeerConnection) {
@@ -93,16 +93,6 @@
                 }
             } catch (err) {
                 console.log('RTC IP discovery note:', err);
-            }
-
-            // 4. Request local network permission via MediaDevices if WebRTC IP is hidden by browser privacy settings
-            if (!this.tvIpAddress && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                try {
-                    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
-                        stream.getTracks().forEach(function (t) { t.stop(); });
-                        self.detectIpAddress();
-                    }).catch(function (e) {});
-                } catch (e) {}
             }
         },
 

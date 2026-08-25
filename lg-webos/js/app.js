@@ -80,26 +80,15 @@
 
             if (ipElement) {
                 ipElement.style.cursor = 'pointer';
-                ipElement.title = 'Clicca per rilevare o impostare l\'IP Wi-Fi';
+                ipElement.title = 'Clicca per impostare l\'indirizzo IP Wi-Fi';
                 ipElement.addEventListener('click', function () {
-                    // Trigger native browser permission prompt on user click
-                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                        navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
-                            stream.getTracks().forEach(function (t) { t.stop(); });
-                            if (self.server) self.server.detectIpAddress();
-                            self.showToast('Rilevamento IP attivato!');
-                        }).catch(function (e) {
-                            self.promptManualIp();
-                        });
-                    } else {
-                        self.promptManualIp();
-                    }
+                    self.promptManualIp();
                 });
             }
         },
 
         promptManualIp: function () {
-            var currentIp = (this.server && this.server.tvIpAddress) ? this.server.tvIpAddress : '';
+            var currentIp = (this.server && this.server.tvIpAddress) ? this.server.tvIpAddress : '192.168.178.143';
             var newIp = prompt('Inserisci l\'indirizzo IP locale Wi-Fi del tuo dispositivo (es. 192.168.178.143):', currentIp);
             if (newIp && newIp.trim()) {
                 var cleaned = newIp.trim();
