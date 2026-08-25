@@ -11,12 +11,14 @@
         this.pairingToken = pairingToken || '2TV-TOKEN-123';
         this.onPlayCallback = onPlayCallback;
         this.onPairCallback = onPairCallback;
-        this.tvIpAddress = '192.168.1.100';
+        this.tvIpAddress = '192.168.178.143';
 
         // Check if user previously saved a manual IP
         try {
             var savedIp = localStorage.getItem('2TV_MANUAL_IP');
-            if (savedIp) this.tvIpAddress = savedIp;
+            if (savedIp && savedIp !== '192.168.1.100') {
+                this.tvIpAddress = savedIp;
+            }
         } catch (e) {}
     }
 
@@ -68,7 +70,7 @@
                 } catch (e) {}
             }
 
-            // 3. WebRTC Local IP Discovery (Only accept private local subnet IPv4 addresses: 192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+            // 3. WebRTC Local IP Discovery (Only accept private local subnet IPv4 addresses)
             try {
                 var RTCPeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection;
                 if (RTCPeerConnection) {

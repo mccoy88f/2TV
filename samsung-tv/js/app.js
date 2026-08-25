@@ -82,7 +82,7 @@
                 ipElement.style.cursor = 'pointer';
                 ipElement.title = 'Clicca per modificare l\'indirizzo IP Wi-Fi';
                 ipElement.addEventListener('click', function () {
-                    var currentIp = (self.server && self.server.tvIpAddress !== '192.168.1.100') ? self.server.tvIpAddress : '192.168.178.143';
+                    var currentIp = (self.server && self.server.tvIpAddress && self.server.tvIpAddress !== '192.168.1.100') ? self.server.tvIpAddress : '192.168.178.143';
                     var newIp = prompt('Inserisci l\'indirizzo IP locale Wi-Fi del tuo dispositivo (es. 192.168.178.143):', currentIp);
                     if (newIp && newIp.trim()) {
                         var cleaned = newIp.trim();
@@ -230,6 +230,7 @@
             try { savedIp = localStorage.getItem('2TV_MANUAL_IP'); } catch (e) {}
 
             var rawIp = savedIp || detectedIp || (this.server ? this.server.tvIpAddress : null) || '192.168.178.143';
+            if (rawIp === '192.168.1.100') rawIp = '192.168.178.143';
             
             // Validate IPv4 private local subnet format
             var isPrivateLocal = this.server ? this.server.isPrivateLocalIp(rawIp) : /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(rawIp);
