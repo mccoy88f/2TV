@@ -168,23 +168,21 @@
                 ipElement.textContent = displayUrl;
             }
 
-            var qrPayload = JSON.stringify({
-                name: this.receiver ? this.receiver.tvNickname : '2TV Receiver',
-                ip: hostIp,
-                port: parseInt(hostPort, 10) || 8080,
-                pairingToken: this.receiver ? this.receiver.pairingToken : '2TV-DEMO',
-                platform: isHostedWeb ? 'web' : 'tv',
-                url: displayUrl
-            });
+            var token = this.receiver ? this.receiver.pairingToken : '2TV-DEMO';
+            var nickname = this.receiver ? this.receiver.tvNickname : '2TV Receiver';
+            
+            // Clean, high-contrast URL QR code payload (Version 2-3 QR Code with crisp large blocks)
+            var pairUrl = displayUrl + (displayUrl.indexOf('?') === -1 ? '?' : '&') + 'token=' + token + '&name=' + encodeURIComponent(nickname);
 
             var qrContainer = document.getElementById('qrcode');
             if (qrContainer) {
                 qrContainer.innerHTML = '';
                 if (typeof QRCode !== 'undefined') {
                     new QRCode('qrcode', {
-                        text: qrPayload,
-                        width: 216,
-                        height: 216
+                        text: pairUrl,
+                        width: 180,
+                        height: 180,
+                        correctLevel: QRCode.CorrectLevel.M
                     });
                 }
             }
