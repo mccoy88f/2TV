@@ -52,12 +52,16 @@ class TvEmbeddedServer(
         server = embeddedServer(CIO, port = port) {
             routing {
                 get("/api/ping") {
+                    val clientIp = call.request.origin.remoteHost
+                    val deviceName = call.request.headers["X-Device-Name"] ?: "Smartphone"
+                    onDevicePaired(DevicePairInfo(deviceName = deviceName, deviceIp = clientIp))
                     call.respondText(
                         text = """{"success":true,"message":"online"}""",
                         contentType = ContentType.Application.Json,
                         status = HttpStatusCode.OK
                     )
                 }
+
 
                 post("/api/pair") {
                     val clientIp = call.request.origin.remoteHost

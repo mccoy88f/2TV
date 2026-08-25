@@ -142,12 +142,15 @@ class TvSenderClient {
     suspend fun pingTv(ip: String, port: Int): Boolean {
         return try {
             val urlString = "http://$ip:$port/api/ping"
-            val response = httpClient.get(urlString)
+            val response = httpClient.get(urlString) {
+                header("X-Device-Name", android.os.Build.MODEL)
+            }
             response.status == HttpStatusCode.OK
         } catch (e: Exception) {
             false
         }
     }
+
 
     private fun getFileNameFromUri(context: Context, uri: Uri): String {
         var fileName = ""

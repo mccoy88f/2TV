@@ -51,6 +51,10 @@ class TvMainActivity : FragmentActivity() {
         // Load saved paired devices from SharedPreferences
         pairedDevices.clear()
         pairedDevices.addAll(PairingManager.getPairedDevices(this))
+        if (pairedDevices.isNotEmpty()) {
+            binding.qrCard.visibility = View.GONE
+        }
+
 
         // Setup bottom control bar buttons
         binding.btnManagePairings.setOnClickListener {
