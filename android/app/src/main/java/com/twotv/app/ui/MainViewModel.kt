@@ -38,10 +38,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val selectedTv: StateFlow<PairedTv?> = tvDao.getSelectedTvFlow()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val sendHistory: StateFlow<List<SendHistory>> = historyDao.getHistory()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     var sendCategoryMode = MutableStateFlow(SendCategoryMode.STREAM)
     var inputUrl = MutableStateFlow("")
@@ -64,6 +64,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
         }
+
+        viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(5000)
+                val tv = selectedTv.value
+                if (tv != null) {
+                    val isOnline = senderClient.pingTv(tv.ip, tv.port)
+                    isTvOnline.value = isOnline
+                }
+            }
+        }
+
     }
 
     fun checkConnectionStatus(targetTv: PairedTv? = null) {
@@ -75,6 +87,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
 
 
     fun setSendCategoryMode(mode: SendCategoryMode) {

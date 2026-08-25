@@ -395,25 +395,17 @@ private fun ActiveTvCard(
                                     .size(10.dp)
                                     .clip(CircleShape)
                                     .background(
-                                        when (isTvOnline) {
-                                            true -> Color(0xFF00E676)
-                                            false -> Color(0xFFFF5252)
-                                            null -> Color.Gray
-                                        }
-
+                                        if (isTvOnline == false) Color(0xFFFF5252) else Color(0xFF00E676)
                                     )
                             )
                         }
 
                         Text(
-                            text = "${selectedTv.ip}:${selectedTv.port} • " + when (isTvOnline) {
-                                true -> "Connessa"
-                                false -> "Non raggiungibile"
-                                null -> "Verifica in corso..."
-                            },
+                            text = "${selectedTv.ip}:${selectedTv.port} • " + if (isTvOnline == false) "Non raggiungibile" else "Connessa",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+
                     } else {
                         Text(
                             text = stringResource(R.string.no_tv_paired),
