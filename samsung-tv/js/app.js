@@ -80,13 +80,18 @@
 
             if (ipElement) {
                 ipElement.style.cursor = 'pointer';
+                ipElement.title = 'Clicca per modificare l\'indirizzo IP Wi-Fi';
                 ipElement.addEventListener('click', function () {
-                    var currentIp = self.server ? self.server.tvIpAddress : '192.168.1.100';
-                    var newIp = prompt('Inserisci l\'indirizzo IP locale della TV/Dispositivo sulla tua rete Wi-Fi (es. 192.168.1.50):', currentIp);
+                    var currentIp = (self.server && self.server.tvIpAddress !== '192.168.1.100') ? self.server.tvIpAddress : '192.168.178.143';
+                    var newIp = prompt('Inserisci l\'indirizzo IP locale Wi-Fi del tuo dispositivo (es. 192.168.178.143):', currentIp);
                     if (newIp && newIp.trim()) {
-                        if (self.server) self.server.setManualIp(newIp.trim());
-                        else self.updateIpDisplay(newIp.trim(), 8080);
-                        self.showToast('IP aggiornato a: ' + newIp.trim());
+                        var cleaned = newIp.trim();
+                        try {
+                            localStorage.setItem('2TV_MANUAL_IP', cleaned);
+                        } catch (e) {}
+                        if (self.server) self.server.setManualIp(cleaned);
+                        else self.updateIpDisplay(cleaned, 8080);
+                        self.showToast('IP Wi-Fi salvato: ' + cleaned);
                     }
                 });
             }
@@ -221,11 +226,14 @@
 
         updateIpDisplay: function (detectedIp, detectedPort) {
             var ipElement = document.getElementById('tv-ip-display');
-            var rawIp = detectedIp || (this.server ? this.server.tvIpAddress : null) || '192.168.1.100';
+            var savedIp = null;
+            try { savedIp = localStorage.getItem('2TV_MANUAL_IP'); } catch (e) {}
+
+            var rawIp = savedIp || detectedIp || (this.server ? this.server.tvIpAddress : null) || '192.168.178.143';
             
-            // Validate IPv4 private local subnet format (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+            // Validate IPv4 private local subnet format
             var isPrivateLocal = this.server ? this.server.isPrivateLocalIp(rawIp) : /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(rawIp);
-            var hostIp = isPrivateLocal ? rawIp : '192.168.1.100';
+            var hostIp = isPrivateLocal ? rawIp : '192.168.178.143';
             var hostPort = parseInt(detectedPort || window.location.port || 8080, 10);
 
             if (ipElement) {
