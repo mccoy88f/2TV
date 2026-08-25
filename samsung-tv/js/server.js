@@ -1,7 +1,7 @@
 /**
  * 2TV Samsung Smart TV HTTP Receiver Server Module
  * Implements 2TV REST Protocol (/api/ping, /api/pair, /api/play, /api/upload)
- * Local IP Discovery via Tizen APIs, webOS Luna APIs, STUN WebRTC, and LocalStorage
+ * Local IP Discovery via Tizen APIs, webOS Luna APIs, WebRTC, and LocalStorage
  */
 (function (window) {
     'use strict';
@@ -26,6 +26,14 @@
             this.startListening();
         },
 
+        isPrivateLocalIp: function (ip) {
+            if (!ip) return false;
+            if (ip.indexOf('192.168.') === 0) return true;
+            if (ip.indexOf('10.') === 0) return true;
+            if (/^172\.(1[6-9]|2[0-9]|3[01])\./.test(ip)) return true;
+            return false;
+        },
+
         detectIpAddress: function () {
             var self = this;
 
@@ -33,7 +41,7 @@
             if (typeof tizen !== 'undefined' && tizen.systeminfo) {
                 try {
                     tizen.systeminfo.getPropertyValue('NETWORK', function (net) {
-                        if (net && net.ipAddress && net.ipAddress !== '127.0.0.1') {
+                        if (net && net.ipAddress && self.isPrivateLocalIp(net.ipAddress)) {
                             self.tvIpAddress = net.ipAddress;
                             if (window.App) window.App.updateIpDisplay(self.tvIpAddress, self.port);
                         }
@@ -51,7 +59,7 @@
                             if (res && res.wired && res.wired.ipAddress) ip = res.wired.ipAddress;
                             else if (res && res.wifi && res.wifi.ipAddress) ip = res.wifi.ipAddress;
 
-                            if (ip && ip !== '127.0.0.1') {
+                            if (ip && self.isPrivateLocalIp(ip)) {
                                 self.tvIpAddress = ip;
                                 if (window.App) window.App.updateIpDisplay(self.tvIpAddress, self.port);
                             }
@@ -60,13 +68,11 @@
                 } catch (e) {}
             }
 
-            // 3. WebRTC Local IP Discovery via STUN Server
+            // 3. WebRTC Local IP Discovery (Only accept private local subnet IPv4 addresses: 192.168.x.x, 10.x.x.x, 172.16-31.x.x)
             try {
                 var RTCPeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection;
                 if (RTCPeerConnection) {
-                    var rtc = new RTCPeerConnection({
-                        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-                    });
+                    var rtc = new RTCPeerConnection({ iceServers: [] });
                     rtc.createDataChannel('');
                     rtc.createOffer(function (offerDesc) {
                         rtc.setLocalDescription(offerDesc);
@@ -75,9 +81,12 @@
                     rtc.onicecandidate = function (evt) {
                         if (evt && evt.candidate && evt.candidate.candidate) {
                             var ipMatch = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(evt.candidate.candidate);
-                            if (ipMatch && ipMatch[1] && ipMatch[1] !== '127.0.0.1' && ipMatch[1] !== '0.0.0.0') {
-                                self.tvIpAddress = ipMatch[1];
-                                if (window.App) window.App.updateIpDisplay(self.tvIpAddress, self.port);
+                            if (ipMatch && ipMatch[1]) {
+                                var candidateIp = ipMatch[1];
+                                if (self.isPrivateLocalIp(candidateIp)) {
+                                    self.tvIpAddress = candidateIp;
+                                    if (window.App) window.App.updateIpDisplay(self.tvIpAddress, self.port);
+                                }
                             }
                         }
                     };

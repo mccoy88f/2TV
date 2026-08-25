@@ -82,7 +82,7 @@
                 ipElement.style.cursor = 'pointer';
                 ipElement.addEventListener('click', function () {
                     var currentIp = self.server ? self.server.tvIpAddress : '192.168.1.100';
-                    var newIp = prompt('Inserisci l\'indirizzo IP locale della TV/Dispositivo sulla tua rete Wi-Fi:', currentIp);
+                    var newIp = prompt('Inserisci l\'indirizzo IP locale della TV/Dispositivo sulla tua rete Wi-Fi (es. 192.168.1.50):', currentIp);
                     if (newIp && newIp.trim()) {
                         if (self.server) self.server.setManualIp(newIp.trim());
                         else self.updateIpDisplay(newIp.trim(), 8080);
@@ -223,9 +223,9 @@
             var ipElement = document.getElementById('tv-ip-display');
             var rawIp = detectedIp || (this.server ? this.server.tvIpAddress : null) || '192.168.1.100';
             
-            // Validate IPv4 numeric format
-            var isNumericIp = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/.test(rawIp) && rawIp !== '127.0.0.1';
-            var hostIp = isNumericIp ? rawIp : '192.168.1.100';
+            // Validate IPv4 private local subnet format (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+            var isPrivateLocal = this.server ? this.server.isPrivateLocalIp(rawIp) : /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(rawIp);
+            var hostIp = isPrivateLocal ? rawIp : '192.168.1.100';
             var hostPort = parseInt(detectedPort || window.location.port || 8080, 10);
 
             if (ipElement) {
