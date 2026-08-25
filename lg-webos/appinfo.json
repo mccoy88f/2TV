@@ -1,0 +1,11 @@
+{
+    "id": "com.twotv.webos",
+    "version": "2.0.0",
+    "type": "web",
+    "main": "index.html",
+    "title": "2TV Receiver",
+    "icon": "icon.png",
+    "largeIcon": "large-icon.png",
+    "vendor": "2TV",
+    "appDescription": "2TV Receiver App for LG webOS Smart TV"
+}

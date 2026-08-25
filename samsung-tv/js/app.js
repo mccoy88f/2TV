@@ -1,16 +1,16 @@
 /**
  * 2TV Samsung Smart TV Receiver Main Application Controller
- * Handles UI state, focus navigation, pairing, history, and key routing
+ * Powered by web-tv-core shared modules
  */
 (function (window) {
     'use strict';
 
     function AppController() {
         this.player = null;
+        this.receiver = null;
         this.server = null;
-        this.history = [];
+        this.focusedGroup = 'HISTORY'; // 'HISTORY', 'CONTROL_BAR', 'MODAL', 'PLAYER'
         this.focusedIndex = 0;
-        this.pairingToken = '2TV-' + Math.floor(1000 + Math.random() * 9000);
     }
 
     AppController.prototype = {
@@ -18,23 +18,49 @@
             var self = this;
             console.log('Initializing 2TV Samsung Smart TV App...');
 
+            this.receiver = new TvReceiver();
+            this.receiver.init();
+
             this.player = new UniversalPlayer();
-            this.loadHistory();
 
-            // Initialize Remote Control Keys
-            TizenKeys.init(function (action, event) {
-                self.handleKeyAction(action, event);
-            });
+            // Initialize Key Adapter for TV Remote Control
+            if (window.KeyAdapter) {
+                KeyAdapter.init(function (action, event) {
+                    self.handleKeyAction(action, event);
+                });
+            }
 
-            // Initialize Server & QR Code
-            this.server = new TvServer(8080, this.pairingToken, function (payload) {
-                self.onReceiveMedia(payload);
-            });
-            this.server.init();
+            // Initialize HTTP Receiver Server & QR Code
+            if (window.TvServer) {
+                this.server = new TvServer(8080, this.receiver.pairingToken, function (payload) {
+                    self.onReceiveMedia(payload);
+                });
+                this.server.init();
+            }
 
+            this.setupControlBarListeners();
             this.updateIpDisplay('192.168.1.100', 8080);
             this.renderHistory();
             this.updateFocus();
+        },
+
+        setupControlBarListeners: function () {
+            var self = this;
+            var btnPairings = document.getElementById('btn-manage-pairings');
+            var btnHistory = document.getElementById('btn-show-history');
+
+            if (btnPairings) {
+                btnPairings.addEventListener('click', function () {
+                    self.showToast('Accoppiamenti gestiti dallo smartphone');
+                });
+            }
+            if (btnHistory) {
+                btnHistory.addEventListener('click', function () {
+                    self.focusedGroup = 'HISTORY';
+                    self.focusedIndex = 0;
+                    self.updateFocus();
+                });
+            }
         },
 
         handleKeyAction: function (action, event) {
@@ -46,65 +72,83 @@
                         this.player.stopCurrent();
                         this.showToast('Riproduzione interrotta');
                         break;
-                    case 'ENTER':
-                    case 'PLAY':
-                    case 'PAUSE':
-                        this.player.togglePlayPause();
-                        break;
-                    case 'LEFT':
-                    case 'RW':
-                        this.player.seek(-10);
-                        break;
-                    case 'RIGHT':
-                    case 'FF':
-                        this.player.seek(10);
-                        break;
-                }
-            } else {
-                // Key actions in Dashboard mode (D-pad grid navigation)
-                var cards = document.querySelectorAll('.media-card');
-                if (cards.length === 0) {
-                    if (action === 'RETURN') this.confirmExit();
-                    return;
-                }
-
-                switch (action) {
-                    case 'LEFT':
                     case 'UP':
-                        if (this.focusedIndex > 0) {
-                            this.focusedIndex--;
-                            this.updateFocus();
-                        }
+                        this.player.showOverlayTemporarily();
                         break;
-                    case 'RIGHT':
-                    case 'DOWN':
-                        if (this.focusedIndex < cards.length - 1) {
-                            this.focusedIndex++;
-                            this.updateFocus();
-                        }
-                        break;
-                    case 'ENTER':
-                        var selectedItem = this.history[this.focusedIndex];
-                        if (selectedItem) {
-                            this.player.playMedia(selectedItem);
-                        }
-                        break;
-                    case 'RETURN':
-                        this.confirmExit();
-                        break;
+                }
+                return;
+            }
+
+            // Modal Navigation
+            var modal = document.getElementById('m3u-modal');
+            if (modal && modal.classList.contains('active')) {
+                if (action === 'RETURN') {
+                    modal.classList.remove('active');
+                }
+                return;
+            }
+
+            // Dashboard Grid Navigation
+            var historyCards = document.querySelectorAll('.media-card');
+            var controlBtns = document.querySelectorAll('#bottom-control-bar .tv-btn');
+
+            if (action === 'RETURN') {
+                this.confirmExit();
+                return;
+            }
+
+            if (this.focusedGroup === 'HISTORY') {
+                if (action === 'DOWN') {
+                    if (this.focusedIndex < historyCards.length - 1) {
+                        this.focusedIndex++;
+                    } else {
+                        this.focusedGroup = 'CONTROL_BAR';
+                        this.focusedIndex = 0;
+                    }
+                    this.updateFocus();
+                } else if (action === 'UP') {
+                    if (this.focusedIndex > 0) {
+                        this.focusedIndex--;
+                        this.updateFocus();
+                    }
+                } else if (action === 'ENTER') {
+                    var selectedItem = this.receiver.history[this.focusedIndex];
+                    if (selectedItem) {
+                        this.player.playMedia(selectedItem);
+                    }
+                }
+            } else if (this.focusedGroup === 'CONTROL_BAR') {
+                if (action === 'UP') {
+                    this.focusedGroup = 'HISTORY';
+                    this.focusedIndex = historyCards.length > 0 ? 0 : 0;
+                    this.updateFocus();
+                } else if (action === 'LEFT' && this.focusedIndex > 0) {
+                    this.focusedIndex--;
+                    this.updateFocus();
+                } else if (action === 'RIGHT' && this.focusedIndex < controlBtns.length - 1) {
+                    this.focusedIndex++;
+                    this.updateFocus();
+                } else if (action === 'ENTER') {
+                    if (controlBtns[this.focusedIndex]) {
+                        controlBtns[this.focusedIndex].click();
+                    }
                 }
             }
         },
 
         updateFocus: function () {
-            var cards = document.querySelectorAll('.media-card');
-            for (var i = 0; i < cards.length; i++) {
-                if (i === this.focusedIndex) {
-                    cards[i].classList.add('focused');
-                    cards[i].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                } else {
-                    cards[i].classList.remove('focused');
-                }
+            var historyCards = document.querySelectorAll('.media-card');
+            var controlBtns = document.querySelectorAll('#bottom-control-bar .tv-btn');
+
+            // Remove all focus
+            for (var i = 0; i < historyCards.length; i++) historyCards[i].classList.remove('focused');
+            for (var j = 0; j < controlBtns.length; j++) controlBtns[j].classList.remove('focused');
+
+            if (this.focusedGroup === 'HISTORY' && historyCards[this.focusedIndex]) {
+                historyCards[this.focusedIndex].classList.add('focused');
+                historyCards[this.focusedIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else if (this.focusedGroup === 'CONTROL_BAR' && controlBtns[this.focusedIndex]) {
+                controlBtns[this.focusedIndex].classList.add('focused');
             }
         },
 
@@ -114,82 +158,55 @@
                 ipElement.textContent = 'http://' + ip + ':' + port;
             }
 
-            // Generate QR Code
-            var pairUrl = 'http://' + ip + ':' + port + '?token=' + this.pairingToken;
+            var pairUrl = 'http://' + ip + ':' + port + '?token=' + this.receiver.pairingToken;
+            var qrContainer = document.getElementById('qrcode');
+            if (qrContainer) qrContainer.innerHTML = '';
+
             if (typeof QRCode !== 'undefined') {
                 new QRCode('qrcode', {
                     text: pairUrl,
-                    width: 220,
-                    height: 220
+                    width: 216,
+                    height: 216
                 });
             }
         },
 
         onReceiveMedia: function (payload) {
             this.showToast('Ricevuto: ' + (payload.title || 'Nuovo file'));
-            this.addToHistory(payload);
-            this.player.playMedia(payload);
-        },
-
-        addToHistory: function (item) {
-            // Unshift to top of history
-            this.history.unshift({
-                mediaType: item.mediaType || 'VIDEO',
-                url: item.url,
-                title: item.title || 'Media Senza Titolo',
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            });
-
-            // Keep max 20 items
-            if (this.history.length > 20) this.history.pop();
-            this.saveHistory();
+            this.receiver.addToHistory(payload);
             this.renderHistory();
+            this.player.playMedia(payload);
         },
 
         renderHistory: function () {
             var container = document.getElementById('history-list');
             if (!container) return;
 
-            if (this.history.length === 0) {
-                container.innerHTML = '<div style="color: var(--text-muted); font-size: 16px; padding: 20px 0;">Nessun elemento nello storico. Scansiona il QR Code col telefono per inviare contenuti.</div>';
+            if (this.receiver.history.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted); font-size: 16px; padding: 20px 0;">Nessun elemento nello storico. Inquadra il QR Code dallo smartphone per inviare contenuti.</div>';
                 return;
             }
 
             var html = '';
-            for (var i = 0; i < this.history.length; i++) {
-                var item = this.history[i];
+            for (var i = 0; i < this.receiver.history.length; i++) {
+                var item = this.receiver.history[i];
                 var icon = '🎬';
-                if (item.mediaType === 'PHOTO' || item.mediaType === 'IMAGE') icon = '📸';
-                if (item.mediaType === 'AUDIO') icon = '🎵';
-                if (item.mediaType === 'WEB') icon = '🌐';
+                var category = (item.category || item.mediaType || 'STREAM').toUpperCase();
+
+                if (category === 'PHOTO' || category === 'IMAGE') icon = '📸';
+                if (category === 'AUDIO') icon = '🎵';
+                if (category === 'WEB' || category === 'LINK') icon = '🌐';
 
                 html += '<div class="media-card" data-index="' + i + '">' +
                             '<div class="media-icon">' + icon + '</div>' +
                             '<div class="media-info">' +
                                 '<div class="media-name">' + this.escapeHtml(item.title) + '</div>' +
-                                '<div class="media-type-tag">' + item.mediaType + ' • ' + (item.timestamp || '') + '</div>' +
+                                '<div class="media-type-tag">' + category + ' • ' + (item.timestamp || '') + '</div>' +
                             '</div>' +
                         '</div>';
             }
             container.innerHTML = html;
             this.updateFocus();
-        },
-
-        loadHistory: function () {
-            try {
-                var stored = localStorage.getItem('2TV_SAMSUNG_HISTORY');
-                if (stored) {
-                    this.history = JSON.parse(stored);
-                }
-            } catch (e) {
-                this.history = [];
-            }
-        },
-
-        saveHistory: function () {
-            try {
-                localStorage.setItem('2TV_SAMSUNG_HISTORY', JSON.stringify(this.history));
-            } catch (e) {}
         },
 
         showToast: function (message) {

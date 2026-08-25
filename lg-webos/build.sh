@@ -1,18 +1,15 @@
-#!/usr/var/env bash
-# 2TV Samsung Smart TV (.wgt) Package Builder
+#!/usr/bin/env bash
+# 2TV LG webOS Package Builder
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 CORE_DIR="$ROOT_DIR/web-tv-core"
-OUTPUT_WGT="$SCRIPT_DIR/2TV-SamsungTV.wgt"
 
 echo "=========================================="
-echo "📦 Packaging 2TV for Samsung Smart TV (Tizen)"
+echo "📦 Packaging 2TV for LG Smart TV (webOS)"
 echo "=========================================="
 
-# Sync shared web-tv-core files into samsung-tv directory
-echo "🔄 Syncing shared core files (web-tv-core)..."
 mkdir -p "$SCRIPT_DIR/css" "$SCRIPT_DIR/js"
 cp "$CORE_DIR/css/style.css" "$SCRIPT_DIR/css/style.css"
 cp "$CORE_DIR/js/m3u-parser.js" "$SCRIPT_DIR/js/m3u-parser.js"
@@ -21,13 +18,5 @@ cp "$CORE_DIR/js/receiver.js" "$SCRIPT_DIR/js/receiver.js"
 cp "$CORE_DIR/js/key-adapter.js" "$SCRIPT_DIR/js/key-adapter.js"
 cp "$CORE_DIR/lib/qrcode.min.js" "$SCRIPT_DIR/js/qrcode.min.js"
 
-# Remove old package
-rm -f "$OUTPUT_WGT"
-
-# Zip contents into .wgt (Tizen Widget format)
-cd "$SCRIPT_DIR"
-zip -r "$OUTPUT_WGT" config.xml index.html css/ js/ icon.png README.md > /dev/null
-
-echo "✅ Samsung Tizen Package created successfully!"
-echo "📍 Location: $OUTPUT_WGT"
+echo "✅ LG webOS files prepared!"
 echo "=========================================="
