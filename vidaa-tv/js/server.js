@@ -1,7 +1,6 @@
 /**
- * 2TV Samsung Smart TV HTTP Receiver Server Module
- * Implements 2TV REST Protocol (/api/ping, /api/pair, /api/play, /api/upload)
- * Fully Dynamic Local IP Discovery via Tizen APIs, webOS Luna APIs, WebRTC, and LocalStorage
+ * 2TV Samsung Smart TV Receiver Server Module
+ * Implements 2TV REST Protocol and Realtime SSE/WebSocket Relay Channel for Web TV Receivers
  */
 (function (window) {
     'use strict';
@@ -68,7 +67,7 @@
                 } catch (e) {}
             }
 
-            // 3. Retrieve local IP dynamically via WebRTC Candidate ICE Gathering (DataChannel)
+            // 3. Retrieve local IP dynamically via WebRTC Candidate ICE Gathering
             try {
                 var RTCPeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection;
                 if (RTCPeerConnection) {
@@ -115,6 +114,32 @@
                     }
                 } catch (e) {}
             });
+
+            // Connect to Realtime PubSub Channel for Web TV Receivers
+            try {
+                var channelToken = (this.pairingToken || '2TV-DEMO').toLowerCase().replace(/[^a-z0-9]/g, '');
+                var sseUrl = 'https://ntfy.sh/twotv-' + channelToken + '/json';
+                
+                if (typeof EventSource !== 'undefined') {
+                    var eventSource = new EventSource(sseUrl);
+                    eventSource.onmessage = function (evt) {
+                        try {
+                            var msgData = JSON.parse(evt.data);
+                            if (msgData && msgData.message) {
+                                var payload = typeof msgData.message === 'string' ? JSON.parse(msgData.message) : msgData.message;
+                                if (payload && (payload.command === 'PLAY' || payload.url)) {
+                                    console.log('Realtime payload received via SSE:', payload);
+                                    self.handlePlayPayload(payload);
+                                }
+                            }
+                        } catch (err) {
+                            console.log('SSE parse note:', err);
+                        }
+                    };
+                }
+            } catch (e) {
+                console.log('Realtime listener error:', e);
+            }
         },
 
         handlePlayPayload: function (payload) {
