@@ -80,10 +80,10 @@
 
             if (ipElement) {
                 ipElement.style.cursor = 'pointer';
-                ipElement.title = 'Clicca per modificare l\'indirizzo IP Wi-Fi';
+                ipElement.title = 'Clicca per impostare l\'indirizzo IP Wi-Fi';
                 ipElement.addEventListener('click', function () {
-                    var currentIp = (self.server && self.server.tvIpAddress && self.server.tvIpAddress !== '192.168.1.100') ? self.server.tvIpAddress : '192.168.178.143';
-                    var newIp = prompt('Inserisci l\'indirizzo IP locale Wi-Fi del tuo dispositivo (es. 192.168.178.143):', currentIp);
+                    var currentIp = (self.server && self.server.tvIpAddress) ? self.server.tvIpAddress : '192.168.X.X';
+                    var newIp = prompt('Inserisci l\'indirizzo IP locale Wi-Fi del tuo dispositivo (es. 192.168.1.50):', currentIp);
                     if (newIp && newIp.trim()) {
                         var cleaned = newIp.trim();
                         try {
@@ -229,17 +229,22 @@
             var savedIp = null;
             try { savedIp = localStorage.getItem('2TV_MANUAL_IP'); } catch (e) {}
 
-            var rawIp = savedIp || detectedIp || (this.server ? this.server.tvIpAddress : null) || '192.168.178.143';
-            if (rawIp === '192.168.1.100') rawIp = '192.168.178.143';
+            var rawIp = savedIp || detectedIp || (this.server ? this.server.tvIpAddress : null);
             
             // Validate IPv4 private local subnet format
-            var isPrivateLocal = this.server ? this.server.isPrivateLocalIp(rawIp) : /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(rawIp);
-            var hostIp = isPrivateLocal ? rawIp : '192.168.178.143';
+            var isPrivateLocal = rawIp && (this.server ? this.server.isPrivateLocalIp(rawIp) : /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(rawIp));
+            var hostIp = isPrivateLocal ? rawIp : null;
             var hostPort = parseInt(detectedPort || window.location.port || 8080, 10);
 
             if (ipElement) {
-                ipElement.textContent = 'IP: ' + hostIp + ':' + hostPort;
+                if (hostIp) {
+                    ipElement.textContent = 'IP: ' + hostIp + ':' + hostPort;
+                } else {
+                    ipElement.textContent = 'IP: Clicca per inserire IP Wi-Fi';
+                }
             }
+
+            if (!hostIp) return;
 
             var token = this.receiver ? this.receiver.pairingToken : '2TV-DEMO';
             var nickname = this.receiver ? this.receiver.tvNickname : '2TV Receiver';

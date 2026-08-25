@@ -1,7 +1,7 @@
 /**
  * 2TV Samsung Smart TV HTTP Receiver Server Module
  * Implements 2TV REST Protocol (/api/ping, /api/pair, /api/play, /api/upload)
- * Local IP Discovery via Tizen APIs, webOS Luna APIs, WebRTC, and LocalStorage
+ * Fully Dynamic Local IP Discovery via Tizen APIs, webOS Luna APIs, WebRTC, and LocalStorage
  */
 (function (window) {
     'use strict';
@@ -11,14 +11,12 @@
         this.pairingToken = pairingToken || '2TV-TOKEN-123';
         this.onPlayCallback = onPlayCallback;
         this.onPairCallback = onPairCallback;
-        this.tvIpAddress = '192.168.178.143';
+        this.tvIpAddress = null;
 
         // Check if user previously saved a manual IP
         try {
             var savedIp = localStorage.getItem('2TV_MANUAL_IP');
-            if (savedIp && savedIp !== '192.168.1.100') {
-                this.tvIpAddress = savedIp;
-            }
+            if (savedIp) this.tvIpAddress = savedIp;
         } catch (e) {}
     }
 
@@ -39,7 +37,7 @@
         detectIpAddress: function () {
             var self = this;
 
-            // 1. Retrieve local IP via Tizen SystemInfo API (Samsung TV)
+            // 1. Retrieve local IP dynamically via Tizen SystemInfo API (Samsung TV)
             if (typeof tizen !== 'undefined' && tizen.systeminfo) {
                 try {
                     tizen.systeminfo.getPropertyValue('NETWORK', function (net) {
@@ -51,7 +49,7 @@
                 } catch (e) {}
             }
 
-            // 2. Retrieve local IP via LG webOS Luna ConnectionManager API
+            // 2. Retrieve local IP dynamically via LG webOS Luna ConnectionManager API
             if (typeof webOS !== 'undefined' && webOS.service) {
                 try {
                     webOS.service.request('luna://com.webos.service.connectionmanager', {
@@ -70,7 +68,7 @@
                 } catch (e) {}
             }
 
-            // 3. WebRTC Local IP Discovery (Only accept private local subnet IPv4 addresses)
+            // 3. Retrieve local IP dynamically via WebRTC Candidate ICE Gathering
             try {
                 var RTCPeerConnection = window.RTCPeerConnection || window.webkitRTCPeerConnection || window.mozRTCPeerConnection;
                 if (RTCPeerConnection) {
@@ -126,7 +124,7 @@
         },
 
         getPairingUrl: function () {
-            return 'http://' + this.tvIpAddress + ':' + this.port + '?token=' + this.pairingToken;
+            return this.tvIpAddress ? ('http://' + this.tvIpAddress + ':' + this.port + '?token=' + this.pairingToken) : '';
         }
     };
 
