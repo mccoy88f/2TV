@@ -126,7 +126,6 @@ class TvMainActivity : FragmentActivity() {
             pairedDevices.add(0, device)
         }
 
-        // Hide QR code upon pairing to give clean screen view
         binding.qrCard.visibility = View.GONE
         Toast.makeText(this, "Dispositivo accoppiato: ${device.deviceName} (${device.deviceIp})", Toast.LENGTH_SHORT).show()
     }
@@ -188,9 +187,9 @@ class TvMainActivity : FragmentActivity() {
 
         val options = archiveList.map { item ->
             val typeStr = when (item.category) {
+                MediaCategory.STREAM -> "[STREAM]"
                 MediaCategory.WEB -> "[LINK]"
-                MediaCategory.VIDEO, MediaCategory.AUDIO -> "[STREAM]"
-                else -> "[FILE]"
+                MediaCategory.FILE -> "[FILE]"
             }
             "$typeStr ${item.title}"
         }.toTypedArray()
@@ -206,7 +205,7 @@ class TvMainActivity : FragmentActivity() {
 
     private fun showHistoryItemOptionsDialog(index: Int) {
         val item = archiveList[index]
-        val actionText = if (item.category == MediaCategory.VIDEO || item.category == MediaCategory.AUDIO) {
+        val actionText = if (item.category == MediaCategory.STREAM) {
             getString(R.string.btn_play)
         } else {
             getString(R.string.btn_open)
@@ -237,11 +236,7 @@ class TvMainActivity : FragmentActivity() {
     }
 
     private fun handleReceivedMedia(payload: TvPlayPayload) {
-        val category = if (payload.mediaType.equals("WEB", ignoreCase = true)) {
-            MediaCategory.WEB
-        } else {
-            TvArchiveItem.categorize(payload.url, payload.mediaType)
-        }
+        val category = TvArchiveItem.categorize(payload.url, payload.mediaType)
         val isLocal = File(payload.url).exists()
 
         val archiveItem = TvArchiveItem(
@@ -262,10 +257,10 @@ class TvMainActivity : FragmentActivity() {
         binding.mediaTypeBadge.text = item.category.name
         binding.nowPlayingBanner.bringToFront()
 
-        when {
-            // STREAM (Video or Audio stream): Play natively inside 2TV ExoPlayer
-            item.category == MediaCategory.VIDEO || item.category == MediaCategory.AUDIO -> {
-                binding.bottomControlBar.visibility = View.GONE // Hide bottom bar during playback!
+        when (item.category) {
+            // STREAM: Played natively inside 2TV ExoPlayer
+            MediaCategory.STREAM -> {
+                binding.bottomControlBar.visibility = View.GONE
                 binding.idleContainer.visibility = View.GONE
                 binding.playerView.visibility = View.VISIBLE
                 binding.playerView.bringToFront()
@@ -276,14 +271,14 @@ class TvMainActivity : FragmentActivity() {
                 exoPlayer?.play()
             }
 
-            // WEB LINK: Open with default TV Web Browser application
-            item.category == MediaCategory.WEB -> {
+            // WEB LINK: Opened with default TV Web Browser
+            MediaCategory.WEB -> {
                 stopPlaybackAndShowHome()
                 openWebLinkWithDefaultBrowser(item.pathOrUrl)
             }
 
-            // FILE (PDF, Photos, Documents, Local Files): Open with default external TV app via FileProvider
-            else -> {
+            // FILE: Opened with default external TV app via FileProvider
+            MediaCategory.FILE -> {
                 stopPlaybackAndShowHome()
                 openFileWithDefaultApp(item.pathOrUrl)
             }
@@ -355,9 +350,8 @@ class TvMainActivity : FragmentActivity() {
         exoPlayer?.stop()
         binding.playerView.visibility = View.GONE
         binding.idleContainer.visibility = View.VISIBLE
-        binding.bottomControlBar.visibility = View.VISIBLE // Show bottom bar when back to home!
+        binding.bottomControlBar.visibility = View.VISIBLE
     }
-
 
     private fun getLocalIpAddress(): String {
         try {

@@ -116,8 +116,9 @@ class TvEmbeddedServer(
                     try {
                         val multipart = call.receiveMultipart()
                         var title = "File Ricevuto"
-                        var mediaType = "VIDEO"
+                        var mediaType = "FILE"
                         var saveToTv = false
+
                         var savedFile: File? = null
 
                         val contentLength = call.request.headers[HttpHeaders.ContentLength]?.toLongOrNull() ?: 1L

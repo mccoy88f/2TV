@@ -175,10 +175,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 val mediaTypeString = when (sendCategoryMode.value) {
-                    SendCategoryMode.STREAM -> selectedMediaType.value.name
+                    SendCategoryMode.STREAM -> "STREAM"
                     SendCategoryMode.LINK -> "WEB"
-                    SendCategoryMode.FILE -> selectedMediaType.value.name
+                    SendCategoryMode.FILE -> "FILE"
                 }
+
 
                 val payload = MediaPayload(
                     command = "PLAY",

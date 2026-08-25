@@ -114,9 +114,10 @@ class TvSenderClient {
             val httpResponse = httpClient.submitFormWithBinaryData(
                 url = urlString,
                 formData = formData {
-                    append("mediaType", mediaType.name)
+                    append("mediaType", "FILE")
                     append("title", fileName)
                     append("saveToTv", saveToTv.toString())
+
                     append("file", fileBytes, Headers.build {
                         append(HttpHeaders.ContentDisposition, "filename=\"$fileName\"")
                         append(HttpHeaders.ContentType, getMimeType(mediaType))
