@@ -9,8 +9,16 @@ data class M3uChannel(
 
 object M3uParser {
     fun isM3uPlaylist(urlOrPath: String, contentHead: String = ""): Boolean {
-        val lower = urlOrPath.lowercase()
-        return lower.endsWith(".m3u") || lower.contains(".m3u?") || contentHead.contains("#EXTM3U")
+        val lower = urlOrPath.lowercase().trim()
+        // Standard IPTV M3U playlists end in .m3u or .m3u?
+        if (lower.endsWith(".m3u") || lower.contains(".m3u?")) return true
+
+        // If content is provided, verify it has #EXTINF channel definitions
+        if (contentHead.isNotBlank()) {
+            return contentHead.contains("#EXTINF:") && !contentHead.contains("#EXT-X-STREAM-INF")
+        }
+
+        return false
     }
 
     fun parse(content: String): List<M3uChannel> {
@@ -39,17 +47,16 @@ object M3uParser {
                     "Canale ${channels.size + 1}"
                 }
             } else if (trimmed.isNotBlank() && !trimmed.startsWith("#")) {
-                if (currentName.isBlank()) {
-                    currentName = "Canale ${channels.size + 1}"
-                }
-                channels.add(
-                    M3uChannel(
-                        name = currentName,
-                        streamUrl = trimmed,
-                        logoUrl = currentLogo,
-                        groupTitle = currentGroup
+                if (currentName.isNotBlank()) {
+                    channels.add(
+                        M3uChannel(
+                            name = currentName,
+                            streamUrl = trimmed,
+                            logoUrl = currentLogo,
+                            groupTitle = currentGroup
+                        )
                     )
-                )
+                }
                 currentName = ""
                 currentLogo = null
                 currentGroup = null

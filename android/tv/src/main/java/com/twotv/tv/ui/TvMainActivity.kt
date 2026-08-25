@@ -111,8 +111,23 @@ class TvMainActivity : FragmentActivity() {
 
             withContext(Dispatchers.Main) {
                 // Initialize ExoPlayer
-                exoPlayer = ExoPlayer.Builder(this@TvMainActivity).build()
+                exoPlayer = ExoPlayer.Builder(this@TvMainActivity).build().apply {
+                    addListener(object : androidx.media3.common.Player.Listener {
+                        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                            error.printStackTrace()
+                            Toast.makeText(
+                                this@TvMainActivity,
+                                "Impossibile riprodurre lo stream con il player integrato. Apertura app esterne...",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            if (currentPlayingItemUrl.isNotBlank()) {
+                                openMediaWithIntentChooser(currentPlayingItemUrl)
+                            }
+                        }
+                    })
+                }
                 binding.playerView.player = exoPlayer
+
 
                 binding.ipTextView.text = "IP TV: http://$ip:8080"
                 if (qrBitmap != null) {
@@ -487,7 +502,13 @@ class TvMainActivity : FragmentActivity() {
     }
 
     private fun playDirectStream(pathOrUrl: String, title: String, isM3u: Boolean = false) {
-        currentPlayingItemUrl = pathOrUrl
+        val cleanUrl = pathOrUrl.trim()
+        if (cleanUrl.isBlank()) {
+            Toast.makeText(this, "URL dello stream non valido", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        currentPlayingItemUrl = cleanUrl
         binding.nowPlayingTitle.text = title
         binding.mediaTypeBadge.text = "STREAM"
         binding.mediaTypeBadge.setBackgroundColor(android.graphics.Color.parseColor("#8B5CF6"))
@@ -503,10 +524,17 @@ class TvMainActivity : FragmentActivity() {
         binding.playerView.visibility = View.VISIBLE
         binding.playerView.bringToFront()
         scheduleVideoHeaderAutoHide()
-        val mediaItem = MediaItem.fromUri(pathOrUrl)
-        exoPlayer?.setMediaItem(mediaItem)
-        exoPlayer?.prepare()
-        exoPlayer?.play()
+
+        try {
+            val mediaItem = MediaItem.fromUri(Uri.parse(cleanUrl))
+            exoPlayer?.setMediaItem(mediaItem)
+            exoPlayer?.prepare()
+            exoPlayer?.play()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Errore apertura stream: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            openMediaWithIntentChooser(cleanUrl, title)
+        }
     }
 
 
@@ -534,13 +562,13 @@ class TvMainActivity : FragmentActivity() {
         when (item.category) {
             // STREAM: Played natively inside 2TV ExoPlayer or parsed if M3U playlist
             MediaCategory.STREAM -> {
-                val lowerUrl = item.pathOrUrl.lowercase()
-                if (lowerUrl.contains(".m3u") || lowerUrl.contains("m3u8")) {
+                if (M3uParser.isM3uPlaylist(item.pathOrUrl)) {
                     handleM3uPlaylist(item)
                 } else {
                     playDirectStream(item.pathOrUrl, item.title)
                 }
             }
+
 
             // WEB LINK: Opened in WebPreviewDialog directly inside 2TV (fallback to external browser)
             MediaCategory.WEB -> {
