@@ -1,6 +1,9 @@
 /**
  * 2TV Shared Universal Media Player (Tizen, webOS, VIDAA)
- * Supports HTML5 Video, HLS.js (.m3u8), IPTV M3U Playlist Selector, Photo & Web Link Viewers
+ * Native Player Integrations:
+ * - Samsung Tizen: webapis.avplay (C++ native API)
+ * - LG webOS: HTML5 <video> + webOS MediaSource Pipeline
+ * - Hisense VIDAA: HTML5 <video> + Chromium MSE Hardware Pipeline + Hls.js
  */
 (function (window) {
     'use strict';
@@ -143,7 +146,7 @@
             if (this.playerContainerElem) this.playerContainerElem.classList.add('active');
             this.showOverlayTemporarily();
 
-            // Try Samsung native AVPlay or standard HTML5 video
+            // 1. Samsung Tizen Native AVPlay C++ API
             if (typeof webapis !== 'undefined' && webapis.avplay) {
                 try {
                     webapis.avplay.open(url);
@@ -157,10 +160,22 @@
                 } catch (e) {}
             }
 
+            // 2. Hisense VIDAA Native Media API (if available)
+            if (typeof HisenseMedia !== 'undefined' || typeof Hisense !== 'undefined') {
+                try {
+                    if (window.HisenseMedia && window.HisenseMedia.play) {
+                        window.HisenseMedia.play(url);
+                        return;
+                    }
+                } catch (e) {}
+            }
+
+            // 3. LG webOS & Universal Hisense VIDAA HTML5 / Hls.js MediaSource Pipeline
             this.playVideoHtml5(url);
         },
 
         playVideoHtml5: function (url) {
+            var self = this;
             if (!this.videoElem) return;
             this.videoElem.src = url;
 
