@@ -5,6 +5,7 @@
     'use strict';
 
     function TvReceiver() {
+        this.appVersion = '2.0.5';
         this.history = [];
         this.tvNickname = 'Samsung Smart TV';
         this.pairingToken = '2TV-' + Math.floor(1000 + Math.random() * 9000);
