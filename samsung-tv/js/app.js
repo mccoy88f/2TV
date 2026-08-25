@@ -1,6 +1,6 @@
 /**
  * 2TV Samsung Smart TV Receiver Main Application Controller
- * Powered by web-tv-core shared modules
+ * Standardized to Android TV Native UI & Remote Controls 1:1
  */
 (function (window) {
     'use strict';
@@ -9,14 +9,14 @@
         this.player = null;
         this.receiver = null;
         this.server = null;
-        this.focusedGroup = 'HISTORY'; // 'HISTORY', 'CONTROL_BAR', 'MODAL', 'PLAYER'
+        this.focusedGroup = 'CONTROL_BAR'; // 'CONTROL_BAR', 'HISTORY_MODAL', 'M3U_MODAL'
         this.focusedIndex = 0;
     }
 
     AppController.prototype = {
         init: function () {
             var self = this;
-            console.log('Initializing 2TV Receiver App...');
+            console.log('Initializing 2TV Receiver App (Android TV UI Standardized)...');
 
             this.receiver = new TvReceiver();
             this.receiver.init();
@@ -38,34 +38,70 @@
                 this.server.init();
             }
 
-            this.setupControlBarListeners();
+            this.setupListeners();
             this.updateIpDisplay();
-            this.renderHistory();
             this.updateFocus();
         },
 
-        setupControlBarListeners: function () {
+        setupListeners: function () {
             var self = this;
             var btnPairings = document.getElementById('btn-manage-pairings');
             var btnHistory = document.getElementById('btn-show-history');
+            var btnCloseHistory = document.getElementById('btn-close-history-modal');
+            var btnCloseM3u = document.getElementById('btn-close-m3u-modal');
 
             if (btnPairings) {
                 btnPairings.addEventListener('click', function () {
                     self.showToast('Accoppiamenti gestiti dallo smartphone');
                 });
             }
+
             if (btnHistory) {
                 btnHistory.addEventListener('click', function () {
-                    self.focusedGroup = 'HISTORY';
-                    self.focusedIndex = 0;
+                    self.openHistoryModal();
+                });
+            }
+
+            if (btnCloseHistory) {
+                btnCloseHistory.addEventListener('click', function () {
+                    self.closeHistoryModal();
+                });
+            }
+
+            if (btnCloseM3u) {
+                btnCloseM3u.addEventListener('click', function () {
+                    var modal = document.getElementById('m3u-modal');
+                    if (modal) modal.classList.remove('active');
+                    self.focusedGroup = 'CONTROL_BAR';
                     self.updateFocus();
                 });
             }
         },
 
+        openHistoryModal: function () {
+            var modal = document.getElementById('history-modal');
+            if (!modal) return;
+
+            this.renderHistoryModal();
+            modal.classList.add('active');
+            this.focusedGroup = 'HISTORY_MODAL';
+            this.focusedIndex = 0;
+            this.updateFocus();
+        },
+
+        closeHistoryModal: function () {
+            var modal = document.getElementById('history-modal');
+            if (modal) modal.classList.remove('active');
+            this.focusedGroup = 'CONTROL_BAR';
+            this.focusedIndex = 1; // Focus back on History button
+            this.updateFocus();
+        },
+
         handleKeyAction: function (action, event) {
+            var self = this;
+
+            // Player Mode
             if (this.player && this.player.isPlaying()) {
-                // Key actions during playback
                 switch (action) {
                     case 'RETURN':
                     case 'STOP':
@@ -79,17 +115,53 @@
                 return;
             }
 
-            // Modal Navigation
-            var modal = document.getElementById('m3u-modal');
-            if (modal && modal.classList.contains('active')) {
+            // History Modal Navigation
+            var historyModal = document.getElementById('history-modal');
+            if (historyModal && historyModal.classList.contains('active')) {
+                var historyItems = historyModal.querySelectorAll('.modal-list-item');
+                var btnCloseHistory = document.getElementById('btn-close-history-modal');
+
                 if (action === 'RETURN') {
-                    modal.classList.remove('active');
+                    this.closeHistoryModal();
+                    return;
+                }
+
+                if (action === 'DOWN') {
+                    if (this.focusedIndex < historyItems.length) {
+                        this.focusedIndex++;
+                        this.updateFocus();
+                    }
+                } else if (action === 'UP') {
+                    if (this.focusedIndex > 0) {
+                        this.focusedIndex--;
+                        this.updateFocus();
+                    }
+                } else if (action === 'ENTER') {
+                    if (this.focusedIndex < historyItems.length) {
+                        var selectedItem = this.receiver.history[this.focusedIndex];
+                        if (selectedItem) {
+                            this.closeHistoryModal();
+                            this.player.playMedia(selectedItem);
+                        }
+                    } else if (btnCloseHistory) {
+                        this.closeHistoryModal();
+                    }
                 }
                 return;
             }
 
-            // Dashboard Grid Navigation
-            var historyCards = document.querySelectorAll('.media-card');
+            // M3U Modal Navigation
+            var m3uModal = document.getElementById('m3u-modal');
+            if (m3uModal && m3uModal.classList.contains('active')) {
+                if (action === 'RETURN') {
+                    m3uModal.classList.remove('active');
+                    this.focusedGroup = 'CONTROL_BAR';
+                    this.updateFocus();
+                }
+                return;
+            }
+
+            // Main Screen Control Bar D-Pad Navigation
             var controlBtns = document.querySelectorAll('#bottom-control-bar .tv-btn');
 
             if (action === 'RETURN') {
@@ -97,32 +169,8 @@
                 return;
             }
 
-            if (this.focusedGroup === 'HISTORY') {
-                if (action === 'DOWN') {
-                    if (this.focusedIndex < historyCards.length - 1) {
-                        this.focusedIndex++;
-                    } else {
-                        this.focusedGroup = 'CONTROL_BAR';
-                        this.focusedIndex = 0;
-                    }
-                    this.updateFocus();
-                } else if (action === 'UP') {
-                    if (this.focusedIndex > 0) {
-                        this.focusedIndex--;
-                        this.updateFocus();
-                    }
-                } else if (action === 'ENTER') {
-                    var selectedItem = this.receiver.history[this.focusedIndex];
-                    if (selectedItem) {
-                        this.player.playMedia(selectedItem);
-                    }
-                }
-            } else if (this.focusedGroup === 'CONTROL_BAR') {
-                if (action === 'UP') {
-                    this.focusedGroup = 'HISTORY';
-                    this.focusedIndex = historyCards.length > 0 ? 0 : 0;
-                    this.updateFocus();
-                } else if (action === 'LEFT' && this.focusedIndex > 0) {
+            if (this.focusedGroup === 'CONTROL_BAR') {
+                if (action === 'LEFT' && this.focusedIndex > 0) {
                     this.focusedIndex--;
                     this.updateFocus();
                 } else if (action === 'RIGHT' && this.focusedIndex < controlBtns.length - 1) {
@@ -137,18 +185,25 @@
         },
 
         updateFocus: function () {
-            var historyCards = document.querySelectorAll('.media-card');
             var controlBtns = document.querySelectorAll('#bottom-control-bar .tv-btn');
+            var historyModal = document.getElementById('history-modal');
+            var historyItems = historyModal ? historyModal.querySelectorAll('.modal-list-item') : [];
+            var btnCloseHistory = document.getElementById('btn-close-history-modal');
 
             // Remove all focus
-            for (var i = 0; i < historyCards.length; i++) historyCards[i].classList.remove('focused');
-            for (var j = 0; j < controlBtns.length; j++) controlBtns[j].classList.remove('focused');
+            for (var i = 0; i < controlBtns.length; i++) controlBtns[i].classList.remove('focused');
+            for (var j = 0; j < historyItems.length; j++) historyItems[j].classList.remove('focused');
+            if (btnCloseHistory) btnCloseHistory.classList.remove('focused');
 
-            if (this.focusedGroup === 'HISTORY' && historyCards[this.focusedIndex]) {
-                historyCards[this.focusedIndex].classList.add('focused');
-                historyCards[this.focusedIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            } else if (this.focusedGroup === 'CONTROL_BAR' && controlBtns[this.focusedIndex]) {
+            if (this.focusedGroup === 'CONTROL_BAR' && controlBtns[this.focusedIndex]) {
                 controlBtns[this.focusedIndex].classList.add('focused');
+            } else if (this.focusedGroup === 'HISTORY_MODAL') {
+                if (this.focusedIndex < historyItems.length && historyItems[this.focusedIndex]) {
+                    historyItems[this.focusedIndex].classList.add('focused');
+                    historyItems[this.focusedIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else if (btnCloseHistory) {
+                    btnCloseHistory.classList.add('focused');
+                }
             }
         },
 
@@ -165,13 +220,12 @@
             var displayUrl = isHostedWeb ? (window.location.origin + window.location.pathname) : ('http://' + hostIp + ':' + hostPort);
 
             if (ipElement) {
-                ipElement.textContent = displayUrl;
+                ipElement.textContent = isHostedWeb ? displayUrl : ('IP: ' + hostIp + ':' + hostPort);
             }
 
             var token = this.receiver ? this.receiver.pairingToken : '2TV-DEMO';
             var nickname = this.receiver ? this.receiver.tvNickname : '2TV Receiver';
             
-            // Clean, high-contrast URL QR code payload (Version 2-3 QR Code with crisp large blocks)
             var pairUrl = displayUrl + (displayUrl.indexOf('?') === -1 ? '?' : '&') + 'token=' + token + '&name=' + encodeURIComponent(nickname);
 
             var qrContainer = document.getElementById('qrcode');
@@ -180,8 +234,8 @@
                 if (typeof QRCode !== 'undefined') {
                     new QRCode('qrcode', {
                         text: pairUrl,
-                        width: 180,
-                        height: 180,
+                        width: 144,
+                        height: 144,
                         correctLevel: QRCode.CorrectLevel.M
                     });
                 }
@@ -191,16 +245,15 @@
         onReceiveMedia: function (payload) {
             this.showToast('Ricevuto: ' + (payload.title || 'Nuovo file'));
             this.receiver.addToHistory(payload);
-            this.renderHistory();
             this.player.playMedia(payload);
         },
 
-        renderHistory: function () {
-            var container = document.getElementById('history-list');
+        renderHistoryModal: function () {
+            var container = document.getElementById('history-modal-body');
             if (!container) return;
 
             if (this.receiver.history.length === 0) {
-                container.innerHTML = '<div style="color: var(--text-muted); font-size: 16px; padding: 20px 0;">Nessun elemento nello storico. Inquadra il QR Code dallo smartphone per inviare contenuti.</div>';
+                container.innerHTML = '<div style="color: var(--text-muted); font-size: 16px; padding: 20px 0; text-align: center;">Nessun elemento nello storico. Inquadra il QR Code dallo smartphone per inviare contenuti.</div>';
                 return;
             }
 
@@ -214,16 +267,12 @@
                 if (category === 'AUDIO') icon = '🎵';
                 if (category === 'WEB' || category === 'LINK') icon = '🌐';
 
-                html += '<div class="media-card" data-index="' + i + '">' +
-                            '<div class="media-icon">' + icon + '</div>' +
-                            '<div class="media-info">' +
-                                '<div class="media-name">' + this.escapeHtml(item.title) + '</div>' +
-                                '<div class="media-type-tag">' + category + ' • ' + (item.timestamp || '') + '</div>' +
-                            '</div>' +
+                html += '<div class="modal-list-item" data-index="' + i + '">' +
+                            '<span>' + icon + ' ' + this.escapeHtml(item.title) + '</span>' +
+                            '<span style="font-size: 12px; color: var(--text-muted);">' + category + ' • ' + (item.timestamp || '') + '</span>' +
                         '</div>';
             }
             container.innerHTML = html;
-            this.updateFocus();
         },
 
         showToast: function (message) {

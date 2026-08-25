@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0">
+    <title>2TV Receiver</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div id="app-container">
+        <!-- 1. Idle Background Screen (Center Screen - Android TV Style) -->
+        <main class="idle-container">
+            <div class="idle-logo">2TV</div>
+            <div class="idle-title">2TV Receiver</div>
+            <div class="idle-subtitle" id="idle-subtitle">Pronto per Connessione</div>
+        </main>
+
+        <!-- 2. TV QR Code Floating Card Overlay (Top Right - Android TV Style) -->
+        <div class="qr-card-overlay" id="qr-card">
+            <div class="qr-wrapper" id="qrcode">
+                <!-- QR Code Canvas rendered here -->
+            </div>
+            <div class="ip-badge" id="tv-ip-display">IP: 192.168.1.X:8080</div>
+        </div>
+
+        <!-- 3. Bottom Control Bar (Floating Center Horizontal - Android TV Style) -->
+        <div class="bottom-control-bar" id="bottom-control-bar">
+            <button class="tv-btn tv-btn-purple" id="btn-manage-pairings">Gestisci Accoppiamenti</button>
+            <button class="tv-btn tv-btn-primary" id="btn-show-history">Cronologia Ricevuti</button>
+        </div>
+    </div>
+
+    <!-- History Modal Dialog -->
+    <div class="tv-modal-backdrop" id="history-modal">
+        <div class="tv-modal">
+            <div class="tv-modal-title">🕒 Media Ricevuti di Recente</div>
+            <div class="tv-modal-body" id="history-modal-body">
+                <!-- History Items rendered dynamically -->
+            </div>
+            <button class="tv-btn tv-btn-danger" id="btn-close-history-modal">Chiudi</button>
+        </div>
+    </div>
+
+    <!-- IPTV M3U Channel Selector Modal -->
+    <div class="tv-modal-backdrop" id="m3u-modal">
+        <div class="tv-modal">
+            <div class="tv-modal-title" id="m3u-modal-title">Seleziona Canale TV</div>
+            <div class="tv-modal-body" id="m3u-modal-body">
+                <!-- Channel Items rendered dynamically -->
+            </div>
+            <button class="tv-btn tv-btn-danger" id="btn-close-m3u-modal">Chiudi</button>
+        </div>
+    </div>
+
+    <!-- Fullscreen Video Player -->
+    <div id="player-container">
+        <video id="video-player" crossorigin="anonymous"></video>
+        
+        <!-- Video Top Header Bar Banner -->
+        <div class="player-overlay" id="player-overlay">
+            <span class="badge-tag badge-stream" id="player-badge">STREAM</span>
+            <div class="player-title" id="player-title">Riproduzione 2TV</div>
+            <div class="player-header-actions">
+                <button class="tv-btn tv-btn-purple" id="btn-m3u-list" style="display: none;">Lista Canali</button>
+                <button class="tv-btn tv-btn-danger" id="btn-close-player">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Photo Viewer -->
+    <div id="photo-viewer">
+        <img id="photo-img" src="" alt="Foto 2TV">
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts (ES5/ES6 universal compatible) -->
+    <script src="js/qrcode.min.js"></script>
+    <script src="js/key-adapter.js"></script>
+    <script src="js/m3u-parser.js"></script>
+    <script src="js/receiver.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/server.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
