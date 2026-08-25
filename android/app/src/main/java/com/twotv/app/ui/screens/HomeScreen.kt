@@ -368,14 +368,18 @@ private fun ActiveTvCard(
                         .size(48.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(
-                            if (selectedTv != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                            when {
+                                selectedTv == null -> Color.Gray
+                                isTvOnline == false -> Color(0xFFFF5252)
+                                else -> Color(0xFF00E676)
+                            }
                         ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Tv,
                         contentDescription = null,
-                        tint = Color.White
+                        tint = if (selectedTv != null && isTvOnline != false) Color.Black else Color.White
                     )
                 }
 
@@ -383,28 +387,17 @@ private fun ActiveTvCard(
 
                 Column {
                     if (selectedTv != null) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = selectedTv.name,
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            // Online/Offline status dot
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (isTvOnline == false) Color(0xFFFF5252) else Color(0xFF00E676)
-                                    )
-                            )
-                        }
+                        Text(
+                            text = selectedTv.name,
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
 
                         Text(
                             text = "${selectedTv.ip}:${selectedTv.port} • " + if (isTvOnline == false) "Non raggiungibile" else "Connessa",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+
 
                     } else {
                         Text(
