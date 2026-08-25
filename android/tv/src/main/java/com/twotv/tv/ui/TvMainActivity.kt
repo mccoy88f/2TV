@@ -25,8 +25,11 @@ import com.twotv.tv.server.TvPlayPayload
 import com.twotv.tv.ui.components.ImagePreviewDialog
 import com.twotv.tv.ui.components.PdfPreviewDialog
 import com.twotv.tv.ui.components.WebPreviewDialog
+import com.twotv.tv.util.M3uChannel
+import com.twotv.tv.util.M3uParser
 import com.twotv.tv.util.PairingManager
 import com.twotv.tv.util.QrCodeGenerator
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -413,6 +416,91 @@ class TvMainActivity : FragmentActivity() {
     }
 
 
+    private fun handleM3uPlaylist(item: TvArchiveItem) {
+        Toast.makeText(this, "Caricamento lista canali IPTV in corso...", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val file = File(item.pathOrUrl)
+                val content = if (file.exists()) {
+                    file.readText()
+                } else {
+                    var urlStr = item.pathOrUrl
+                    if (!urlStr.startsWith("http://") && !urlStr.startsWith("https://")) {
+                        urlStr = "https://$urlStr"
+                    }
+                    val url = java.net.URL(urlStr)
+                    val conn = url.openConnection()
+                    conn.connectTimeout = 8000
+                    conn.readTimeout = 8000
+                    conn.getInputStream().bufferedReader().use { it.readText() }
+                }
+
+                val channels = M3uParser.parse(content)
+
+                withContext(Dispatchers.Main) {
+                    if (channels.isNotEmpty()) {
+                        showM3uChannelsDialog(item.title, channels)
+                    } else {
+                        Toast.makeText(this@TvMainActivity, "Nessun canale valido trovato nella playlist M3U", Toast.LENGTH_LONG).show()
+                        playDirectStream(item.pathOrUrl, item.title)
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@TvMainActivity, "Errore caricamento M3U: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                    playDirectStream(item.pathOrUrl, item.title)
+                }
+            }
+        }
+    }
+
+    private fun showM3uChannelsDialog(playlistTitle: String, channels: List<M3uChannel>) {
+        val channelNames = channels.map { channel ->
+            val groupPrefix = if (!channel.groupTitle.isNullOrBlank()) "[${channel.groupTitle}] " else ""
+            "$groupPrefix${channel.name}"
+        }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("$playlistTitle (${channels.size} canali)")
+            .setItems(channelNames) { _, index ->
+                val selectedChannel = channels[index]
+                showChannelActionDialog(selectedChannel)
+            }
+            .setNegativeButton("Chiudi", null)
+            .show()
+    }
+
+    private fun showChannelActionDialog(channel: M3uChannel) {
+        val choices = arrayOf("Riproduci su 2TV", "Apri con... (App Esterne)")
+        AlertDialog.Builder(this)
+            .setTitle(channel.name)
+            .setItems(choices) { _, choiceIndex ->
+                when (choiceIndex) {
+                    0 -> playDirectStream(channel.streamUrl, channel.name)
+                    1 -> openMediaWithIntentChooser(channel.streamUrl, channel.name)
+                }
+            }
+            .setNegativeButton("Annulla", null)
+            .show()
+    }
+
+    private fun playDirectStream(pathOrUrl: String, title: String) {
+        currentPlayingItemUrl = pathOrUrl
+        binding.nowPlayingTitle.text = title
+        binding.mediaTypeBadge.text = "STREAM"
+        binding.mediaTypeBadge.setBackgroundColor(android.graphics.Color.parseColor("#8B5CF6"))
+
+        binding.bottomControlBar.visibility = View.GONE
+        binding.idleContainer.visibility = View.GONE
+        binding.playerView.visibility = View.VISIBLE
+        binding.playerView.bringToFront()
+        scheduleVideoHeaderAutoHide()
+        val mediaItem = MediaItem.fromUri(pathOrUrl)
+        exoPlayer?.setMediaItem(mediaItem)
+        exoPlayer?.prepare()
+        exoPlayer?.play()
+    }
+
     private fun openOrPlayMediaItem(item: TvArchiveItem) {
         stopPlaybackAndShowHome()
         currentPlayingItemUrl = item.pathOrUrl
@@ -435,17 +523,14 @@ class TvMainActivity : FragmentActivity() {
         }
 
         when (item.category) {
-            // STREAM: Played natively inside 2TV ExoPlayer
+            // STREAM: Played natively inside 2TV ExoPlayer or parsed if M3U playlist
             MediaCategory.STREAM -> {
-                binding.bottomControlBar.visibility = View.GONE
-                binding.idleContainer.visibility = View.GONE
-                binding.playerView.visibility = View.VISIBLE
-                binding.playerView.bringToFront()
-                scheduleVideoHeaderAutoHide()
-                val mediaItem = MediaItem.fromUri(item.pathOrUrl)
-                exoPlayer?.setMediaItem(mediaItem)
-                exoPlayer?.prepare()
-                exoPlayer?.play()
+                val lowerUrl = item.pathOrUrl.lowercase()
+                if (lowerUrl.contains(".m3u") || lowerUrl.contains("m3u8")) {
+                    handleM3uPlaylist(item)
+                } else {
+                    playDirectStream(item.pathOrUrl, item.title)
+                }
             }
 
             // WEB LINK: Opened in WebPreviewDialog directly inside 2TV (fallback to external browser)
@@ -463,6 +548,9 @@ class TvMainActivity : FragmentActivity() {
             MediaCategory.FILE -> {
                 val ext = item.pathOrUrl.substringAfterLast(".", "").lowercase()
                 when (ext) {
+                    "m3u", "m3u8" -> {
+                        handleM3uPlaylist(item)
+                    }
                     "pdf" -> {
                         val file = File(item.pathOrUrl)
                         if (file.exists()) {
@@ -479,20 +567,7 @@ class TvMainActivity : FragmentActivity() {
                         dialog.show()
                     }
                     "mp4", "mkv", "avi", "mov", "webm", "mp3", "wav", "flac", "aac", "ogg" -> {
-                        binding.bottomControlBar.visibility = View.GONE
-                        binding.idleContainer.visibility = View.GONE
-                        binding.playerView.visibility = View.VISIBLE
-                        binding.playerView.bringToFront()
-                        scheduleVideoHeaderAutoHide()
-                        val file = File(item.pathOrUrl)
-                        val mediaItem = if (file.exists()) {
-                            MediaItem.fromUri(Uri.fromFile(file))
-                        } else {
-                            MediaItem.fromUri(item.pathOrUrl)
-                        }
-                        exoPlayer?.setMediaItem(mediaItem)
-                        exoPlayer?.prepare()
-                        exoPlayer?.play()
+                        playDirectStream(item.pathOrUrl, item.title)
                     }
                     else -> {
                         openFileWithDefaultApp(item.pathOrUrl)
@@ -501,6 +576,7 @@ class TvMainActivity : FragmentActivity() {
             }
         }
     }
+
 
 
     private fun openWebLinkWithDefaultBrowser(urlStr: String) {
