@@ -20,6 +20,10 @@ import com.twotv.tv.model.TvArchiveItem
 import com.twotv.tv.server.DevicePairInfo
 import com.twotv.tv.server.TvEmbeddedServer
 import com.twotv.tv.server.TvPlayPayload
+import com.twotv.tv.ui.components.ImagePreviewDialog
+import com.twotv.tv.ui.components.PdfPreviewDialog
+import com.twotv.tv.ui.components.WebPreviewDialog
+import com.twotv.tv.util.PairingManager
 import com.twotv.tv.util.QrCodeGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -43,6 +47,10 @@ class TvMainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityTvMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Load saved paired devices from SharedPreferences
+        pairedDevices.clear()
+        pairedDevices.addAll(PairingManager.getPairedDevices(this))
 
         // Setup bottom control bar buttons
         binding.btnManagePairings.setOnClickListener {
@@ -97,7 +105,6 @@ class TvMainActivity : FragmentActivity() {
 
             // Start Ktor Embedded Server
             embeddedServer = TvEmbeddedServer(
-
                 context = applicationContext,
                 port = 8080,
                 pairingToken = PAIRING_TOKEN,
@@ -131,15 +138,12 @@ class TvMainActivity : FragmentActivity() {
     }
 
     private fun handleDevicePaired(device: DevicePairInfo) {
-        val existingIndex = pairedDevices.indexOfFirst { it.deviceIp == device.deviceIp }
-        if (existingIndex != -1) {
-            pairedDevices[existingIndex] = device
-        } else {
-            pairedDevices.add(0, device)
-        }
+        PairingManager.saveDevice(this, device)
+        pairedDevices.clear()
+        pairedDevices.addAll(PairingManager.getPairedDevices(this))
 
         binding.qrCard.visibility = View.GONE
-        Toast.makeText(this, "Dispositivo accoppiato: ${device.deviceName} (${device.deviceIp})", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Dispositivo connesso: ${device.deviceName} (${device.deviceIp})", Toast.LENGTH_SHORT).show()
     }
 
     private fun toggleQrCodeVisibility() {
@@ -192,11 +196,10 @@ class TvMainActivity : FragmentActivity() {
     }
 
     private fun showManagePairingsDialog() {
-
         val itemsText = if (pairedDevices.isEmpty()) {
-            arrayOf("Nessun dispositivo accoppiato al momento")
+            arrayOf("Nessun dispositivo accoppiato salvato")
         } else {
-            pairedDevices.map { "• ${it.deviceName} (${it.deviceIp})" }.toTypedArray()
+            pairedDevices.map { "• ${it.deviceName} (${it.deviceIp}) - Connesso" }.toTypedArray()
         }
 
         AlertDialog.Builder(this)
@@ -221,7 +224,9 @@ class TvMainActivity : FragmentActivity() {
             .setTitle("Disaccoppia Dispositivo")
             .setMessage("Rimuovere l'accoppiamento con ${device.deviceName} (${device.deviceIp})?")
             .setPositiveButton("Rimuovi") { _, _ ->
-                pairedDevices.removeAt(index)
+                PairingManager.removeDevice(this, index)
+                pairedDevices.clear()
+                pairedDevices.addAll(PairingManager.getPairedDevices(this))
                 Toast.makeText(this, "Accoppiamento rimosso", Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton("Annulla", null)
@@ -324,16 +329,52 @@ class TvMainActivity : FragmentActivity() {
                 exoPlayer?.play()
             }
 
-            // WEB LINK: Opened with default TV Web Browser
+            // WEB LINK: Opened in WebPreviewDialog directly inside 2TV (fallback to external browser)
             MediaCategory.WEB -> {
                 stopPlaybackAndShowHome()
-                openWebLinkWithDefaultBrowser(item.pathOrUrl)
+                try {
+                    WebPreviewDialog(this, item.title, item.pathOrUrl).show()
+                } catch (e: Exception) {
+                    openWebLinkWithDefaultBrowser(item.pathOrUrl)
+                }
             }
 
-            // FILE: Opened with default external TV app via FileProvider
+            // FILE: Opened using built-in Previewer (PDF, Image, Video/Audio ExoPlayer) directly inside 2TV
             MediaCategory.FILE -> {
                 stopPlaybackAndShowHome()
-                openFileWithDefaultApp(item.pathOrUrl)
+                val ext = item.pathOrUrl.substringAfterLast(".", "").lowercase()
+                when (ext) {
+                    "pdf" -> {
+                        val file = File(item.pathOrUrl)
+                        if (file.exists()) {
+                            PdfPreviewDialog(this, item.title, file).show()
+                        } else {
+                            openFileWithDefaultApp(item.pathOrUrl)
+                        }
+                    }
+                    "jpg", "jpeg", "png", "webp", "gif", "bmp" -> {
+                        ImagePreviewDialog(this, item.title, item.pathOrUrl).show()
+                    }
+                    "mp4", "mkv", "avi", "mov", "webm", "mp3", "wav", "flac", "aac", "ogg" -> {
+                        binding.bottomControlBar.visibility = View.GONE
+                        binding.idleContainer.visibility = View.GONE
+                        binding.playerView.visibility = View.VISIBLE
+                        binding.playerView.bringToFront()
+                        binding.playerView.requestFocus()
+                        val file = File(item.pathOrUrl)
+                        val mediaItem = if (file.exists()) {
+                            MediaItem.fromUri(Uri.fromFile(file))
+                        } else {
+                            MediaItem.fromUri(item.pathOrUrl)
+                        }
+                        exoPlayer?.setMediaItem(mediaItem)
+                        exoPlayer?.prepare()
+                        exoPlayer?.play()
+                    }
+                    else -> {
+                        openFileWithDefaultApp(item.pathOrUrl)
+                    }
+                }
             }
         }
 

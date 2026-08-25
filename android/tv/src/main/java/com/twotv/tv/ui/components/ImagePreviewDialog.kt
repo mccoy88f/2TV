@@ -1,0 +1,53 @@
+package com.twotv.tv.ui.components
+
+import android.app.Dialog
+import android.content.Context
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.Window
+import android.view.WindowManager
+import android.widget.ImageView
+import android.widget.TextView
+import com.twotv.tv.R
+import java.io.File
+
+class ImagePreviewDialog(
+    context: Context,
+    private val title: String,
+    private val pathOrUrl: String
+) : Dialog(context, android.R.style.Theme_Black_NoTitleBar_Fullscreen) {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        requestWindowFeature(Window.FEATURE_NO_TITLE)
+        window?.setLayout(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT
+        )
+
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_image_preview, null)
+        setContentView(view)
+
+        val titleTextView = view.findViewById<TextView>(R.id.imageTitleText)
+        val imageView = view.findViewById<ImageView>(R.id.previewImageView)
+        val closeBtn = view.findViewById<View>(R.id.btnCloseImage)
+
+        titleTextView.text = title
+        closeBtn.setOnClickListener { dismiss() }
+
+        try {
+            val file = File(pathOrUrl)
+            if (file.exists()) {
+                val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                imageView.setImageBitmap(bitmap)
+            } else {
+                imageView.setImageURI(Uri.parse(pathOrUrl))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+}

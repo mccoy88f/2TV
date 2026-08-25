@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<widget xmlns="http://www.w3.org/ns/widgets" 
+        xmlns:tizen="http://tizen.org/ns/widgets" 
+        id="http://twotv.com/2TV" 
+        version="1.0.0" 
+        viewmodes="maximized">
+    <tizen:application id="twotv00001.2TV" package="twotv00001" required_version="2.4"/>
+    <content src="index.html"/>
+    <feature name="http://tizen.org/feature/screen.size.all"/>
+    <feature name="http://tizen.org/feature/network.wifi"/>
+    <icon src="icon.png"/>
+    <name>2TV Receiver</name>
+    
+    <!-- Privileges necessary for Samsung Smart TV & Network Access -->
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:privilege name="http://tizen.org/privilege/network.get"/>
+    <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+    <tizen:privilege name="http://tizen.org/privilege/application.launch"/>
+
+    <tizen:profile name="tv"/>
+    <tizen:setting screen-orientation="landscape" context-menu="enable" background-support="enable" encryption="disable" install-location="auto"/>
+</widget>

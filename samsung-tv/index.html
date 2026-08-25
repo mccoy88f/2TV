@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0">
+    <title>2TV Receiver - Samsung Smart TV</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div id="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="brand">
+                <div class="brand-logo">2TV</div>
+                <div class="brand-title">2TV Receiver</div>
+                <span class="brand-badge">SAMSUNG SMART TV</span>
+            </div>
+            <div class="network-status">
+                <span class="status-dot"></span>
+                <span>Stato: <strong style="color: #00B894;">Pronto per Connessione</strong></span>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main class="main-content">
+            <!-- Left Card: QR Code & IP -->
+            <section class="qr-card">
+                <div class="qr-wrapper" id="qrcode">
+                    <!-- QR Code Canvas rendered here -->
+                </div>
+                <div class="qr-instruction">Abbinamento Rapido</div>
+                <div class="qr-subtext">Apri l'App 2TV sul tuo Smartphone e inquadra il QR Code a schermo</div>
+                <div class="ip-badge" id="tv-ip-display">http://192.168.1.100:8080</div>
+            </section>
+
+            <!-- Right Panel: Welcome & History -->
+            <section class="right-panel">
+                <div class="welcome-card">
+                    <div class="welcome-title">Transmetti qualsiasi contenuto sulla TV 📺</div>
+                    <div class="welcome-desc">
+                        Condividi video, dirette streaming HLS, foto HD, musica o pagine web dallo smartphone in tempo reale sulla tua Samsung Smart TV.
+                    </div>
+                </div>
+
+                <div class="history-section">
+                    <div class="section-title">
+                        <span>🕒</span> Media Ricevuti di Recente
+                    </div>
+                    <div class="history-list" id="history-list">
+                        <!-- History Items rendered dynamically -->
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Fullscreen Video Player -->
+    <div id="player-container">
+        <video id="video-player" crossorigin="anonymous"></video>
+        <div class="player-overlay" id="player-overlay">
+            <div class="player-title" id="player-title">Riproduzione 2TV</div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progress-bar-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Photo Viewer -->
+    <div id="photo-viewer">
+        <img id="photo-img" src="" alt="Foto 2TV">
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts (ES5/ES6 universal compatible) -->
+    <script src="js/qrcode.min.js"></script>
+    <script src="js/tizen-keys.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/server.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
