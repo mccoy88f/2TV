@@ -65,9 +65,6 @@ class TvMainActivity : FragmentActivity() {
             showHistoryDialog()
         }
 
-        binding.btnToggleQrCode.setOnClickListener {
-            toggleQrCodeVisibility()
-        }
 
         // Initialize components asynchronously in background thread
         lifecycleScope.launch(Dispatchers.IO) {
